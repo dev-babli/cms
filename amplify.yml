@@ -1,0 +1,40 @@
+version: 1
+# AWS Amplify Build Configuration for Next.js Full-Stack App
+# This configures how Amplify builds and deploys your Next.js app with API routes
+
+backend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run build
+
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        # Initialize database (Note: SQLite won't persist, use external DB in production)
+        - npm run db:init || echo "Database initialization skipped"
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+# Environment variables (Set these in Amplify Console)
+# NODE_ENV=production
+# ADMIN_EMAIL=admin@yourdomain.com
+# ADMIN_PASSWORD=your-secure-password
+# SESSION_SECRET=your-session-secret
+# JWT_SECRET=your-jwt-secret
+# NEXT_PUBLIC_APP_URL=https://your-amplify-domain.amplifyapp.com
+# DATABASE_URL=your-postgresql-connection-string (REQUIRED - SQLite won't work!)
+
