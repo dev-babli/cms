@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RichTextEditor } from "@/components/cms/rich-text-editor";
 import { LivePreview } from "@/components/cms/live-preview";
 import { FadeIn } from "@/components/ui/scroll-reveal";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 export default function NewBlogPostWithPreview() {

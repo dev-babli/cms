@@ -7,7 +7,13 @@ import { FadeIn } from "@/components/ui/scroll-reveal";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default function BlogPostPage({ params }: PageProps) {
+  // Unwrap params for client component
+  const unwrappedParams = params as unknown as { slug: string };
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +23,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
   const fetchPost = async () => {
     try {
-      const res = await fetch(`/api/cms/blog/${params.slug}`);
+      const res = await fetch(`/api/cms/blog/${unwrappedParams.slug}`);
       const data = await res.json();
       if (data.success && data.data) {
         setPost(data.data);

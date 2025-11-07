@@ -93,7 +93,7 @@ const resolvers = {
   Mutation: {
     createBlogPost: (_: any, { input }: { input: any }) => {
       const result = blogPosts.create(input);
-      return { id: result.lastInsertRowid, ...input };
+      return { id: Number(result.lastInsertRowid), ...input };
     },
     updateBlogPost: (_: any, { id, input }: { id: number; input: any }) => {
       blogPosts.update(id, input);
@@ -117,7 +117,14 @@ const yoga = createYoga({
   fetchAPI: { Response },
 });
 
-export { yoga as GET, yoga as POST };
+// Properly typed handlers for Next.js 15
+export async function GET(request: Request) {
+  return yoga.fetch(request);
+}
+
+export async function POST(request: Request) {
+  return yoga.fetch(request);
+}
 
 
 

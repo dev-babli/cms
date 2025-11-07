@@ -3,10 +3,11 @@ import { versioning } from '@/lib/cms/versioning';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const versions = versioning.getVersions('blog_post', id);
     
     return NextResponse.json({ success: true, data: versions });
@@ -17,10 +18,11 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const body = await request.json();
     
     const result = versioning.saveVersion(

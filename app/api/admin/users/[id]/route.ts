@@ -12,9 +12,12 @@ const UpdateUserSchema = z.object({
 // Update user (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params (Next.js 15+)
+    const { id } = await params;
+    
     // Check authentication
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
@@ -32,7 +35,7 @@ export async function PUT(
       );
     }
 
-    const userId = parseInt(params.id);
+    const userId = parseInt(id);
     if (isNaN(userId)) {
       return NextResponse.json(
         { success: false, error: 'Invalid user ID' },
@@ -69,7 +72,7 @@ export async function PUT(
     console.error('Update user error:', error);
     
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => 
+      const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
       return NextResponse.json(
@@ -88,9 +91,12 @@ export async function PUT(
 // Delete user (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params (Next.js 15+)
+    const { id } = await params;
+    
     // Check authentication
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
@@ -108,7 +114,7 @@ export async function DELETE(
       );
     }
 
-    const userId = parseInt(params.id);
+    const userId = parseInt(id);
     if (isNaN(userId)) {
       return NextResponse.json(
         { success: false, error: 'Invalid user ID' },

@@ -19,19 +19,13 @@ export const resolvers = {
     },
 
     users: async (_: any, { limit = 50, offset = 0 }: { limit?: number; offset?: number }) => {
-      const allUsers = users.getAll();
+      const allUsers = users.list();
       return allUsers.slice(offset, offset + limit);
     },
 
     // Blog post queries
-    blogPost: async (_: any, { id, slug }: { id?: number; slug?: string }) => {
-      if (id) {
-        return blogPosts.getById(id);
-      }
-      if (slug) {
-        return blogPosts.getBySlug(slug);
-      }
-      return null;
+    blogPost: async (_: any, { slug }: { slug: string }) => {
+      return blogPosts.getBySlug(slug);
     },
 
     blogPosts: async (
@@ -141,8 +135,8 @@ export const resolvers = {
         pageInfo: {
           hasNextPage: endIndex < posts.length,
           hasPreviousPage: startIndex > 0,
-          startCursor: paginatedPosts[0]?.id.toString(),
-          endCursor: paginatedPosts[paginatedPosts.length - 1]?.id.toString(),
+          startCursor: (paginatedPosts[0] as any)?.id.toString(),
+          endCursor: (paginatedPosts[paginatedPosts.length - 1] as any)?.id.toString(),
         },
         totalCount: posts.length,
       };
@@ -160,14 +154,8 @@ export const resolvers = {
     },
 
     // Service queries
-    service: async (_: any, { id, slug }: { id?: number; slug?: string }) => {
-      if (id) {
-        return services.getById(id);
-      }
-      if (slug) {
-        return services.getBySlug(slug);
-      }
-      return null;
+    service: async (_: any, { slug }: { slug: string }) => {
+      return services.getBySlug(slug);
     },
 
     services: async (_: any, { published }: { published?: boolean }) => {
@@ -215,17 +203,18 @@ export const resolvers = {
   Mutation: {
     // Auth mutations
     login: async (_: any, { email, password }: { email: string; password: string }) => {
-      const user = users.findByEmail(email);
-      if (!user) {
+      const userWithPassword = users.findByEmailWithPassword(email);
+      if (!userWithPassword) {
         return { success: false, error: 'Invalid credentials' };
       }
 
-      const isValid = await bcrypt.compare(password, user.password_hash);
+      const isValid = await bcrypt.compare(password, userWithPassword.password_hash);
       if (!isValid) {
         return { success: false, error: 'Invalid credentials' };
       }
 
-      const token = sessions.create(user.id!);
+      const token = sessions.create(userWithPassword.id!);
+      const { password_hash, ...user } = userWithPassword;
       return { success: true, token, user };
     },
 
@@ -234,7 +223,7 @@ export const resolvers = {
       { email, password, name }: { email: string; password: string; name: string }
     ) => {
       try {
-        const user = await users.create({ email, password, name, role: 'author', status: 'active' });
+        const user = await users.create({ email, password, name, role: 'author' });
         const token = sessions.create(user.id!);
         return { success: true, token, user };
       } catch (error) {
@@ -261,7 +250,7 @@ export const resolvers = {
         publish_date: input.publishDate || new Date().toISOString(),
       });
 
-      return blogPosts.getById(result.lastInsertRowid);
+      return { id: Number(result.lastInsertRowid), ...input, author: session.name };
     },
 
     updateBlogPost: async (_: any, { id, input }: { id: number; input: any }, context: any) => {
@@ -269,7 +258,7 @@ export const resolvers = {
       if (!session) throw new Error('Unauthorized');
 
       blogPosts.update(id, input);
-      return blogPosts.getById(id);
+      return { id, ...input };
     },
 
     deleteBlogPost: async (_: any, { id }: { id: number }, context: any) => {
@@ -284,8 +273,9 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      blogPosts.update(id, { published: true, publish_date: new Date().toISOString() });
-      return blogPosts.getById(id);
+      const publishDate = new Date().toISOString();
+      blogPosts.update(id, { published: true, publish_date: publishDate });
+      return { id, published: true, publish_date: publishDate };
     },
 
     unpublishBlogPost: async (_: any, { id }: { id: number }, context: any) => {
@@ -293,7 +283,7 @@ export const resolvers = {
       if (!session) throw new Error('Unauthorized');
 
       blogPosts.update(id, { published: false });
-      return blogPosts.getById(id);
+      return { id, published: false };
     },
 
     // Category mutations (placeholder)
@@ -315,7 +305,7 @@ export const resolvers = {
       if (!session) throw new Error('Unauthorized');
 
       const result = services.create(input);
-      return services.getById(result.lastInsertRowid);
+      return { id: Number(result.lastInsertRowid), ...input };
     },
 
     updateService: async (_: any, { id, input }: { id: number; input: any }, context: any) => {
@@ -323,7 +313,7 @@ export const resolvers = {
       if (!session) throw new Error('Unauthorized');
 
       services.update(id, input);
-      return services.getById(id);
+      return { id, ...input };
     },
 
     deleteService: async (_: any, { id }: { id: number }, context: any) => {

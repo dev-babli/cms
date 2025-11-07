@@ -60,7 +60,6 @@ export interface FieldConfig {
     multiple?: boolean;
     // For reference
     referenceType?: string;
-    multiple?: boolean;
     // For array
     itemType?: FieldConfig;
     minItems?: number;
@@ -617,7 +616,7 @@ export const generateValidationSchema = (contentType: ContentType): z.ZodSchema 
   const fields: Record<string, z.ZodSchema> = {};
 
   contentType.fields.forEach(field => {
-    let schema: z.ZodSchema;
+    let schema: any;
 
     switch (field.type) {
       case FieldTypes.TEXT:

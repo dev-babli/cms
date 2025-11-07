@@ -255,3 +255,5 @@ function analyzeSEO(content: any, config: Record<string, any>): SEOAnalysisResul
 export default seoAnalyzerPlugin;
 
 
+
+

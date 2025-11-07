@@ -10,7 +10,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RichTextEditor } from "@/components/cms/rich-text-editor";
 import Link from "next/link";
 
-export default function EditBlogPost({ params }: { params: { id: string } }) {
+interface PageProps {
+    params: Promise<{ id: string }>;
+}
+
+export default function EditBlogPost({ params }: PageProps) {
+    // Unwrap params for client component
+    const unwrappedParams = params as unknown as { id: string };
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -32,7 +38,7 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
 
     const fetchPost = async () => {
         try {
-            const res = await fetch(`/api/cms/blog/${params.id}`);
+            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}`);
             const data = await res.json();
             if (data.success) {
                 setFormData(data.data);
@@ -49,7 +55,7 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
         setSaving(true);
 
         try {
-            const res = await fetch(`/api/cms/blog/${params.id}`, {
+            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),

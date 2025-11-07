@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useScrollReveal(options = {}) {
+interface ScrollRevealOptions {
+  once?: boolean;
+  threshold?: number;
+  rootMargin?: string;
+}
+
+export function useScrollReveal(options: ScrollRevealOptions = {}) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 

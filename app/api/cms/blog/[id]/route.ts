@@ -4,11 +4,12 @@ import { BlogPostSchema } from '@/lib/cms/types';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
-    const post = blogPosts.getBySlug(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
+    const post = blogPosts.getBySlug(paramId);
     
     if (!post) {
       return NextResponse.json({ success: false, error: 'Post not found' }, { status: 404 });
@@ -22,10 +23,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const body = await request.json();
     const validated = BlogPostSchema.partial().parse(body);
     
@@ -38,10 +40,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id);
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const result = blogPosts.delete(id);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {

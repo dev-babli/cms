@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     console.log('Blog post created successfully:', result);
     
     // Trigger real-time updates
-    if (typeof global !== 'undefined' && global.io) {
-      global.io.emit('blog:created', {
+    if (typeof global !== 'undefined' && (global as any).io) {
+      (global as any).io.emit('blog:created', {
         id: result.lastInsertRowid,
         ...validated,
       });
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     
     // Better error handling for Zod validation
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => 
+      const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
       return NextResponse.json({ 
