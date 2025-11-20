@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   images: {
@@ -13,7 +12,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  outputFileTracingRoot: path.join(__dirname, ".."),
+  // Removed outputFileTracingRoot to fix Vercel deployment path issues
 };
 
 export default nextConfig;
