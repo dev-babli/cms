@@ -44,8 +44,17 @@ export default function RegisterPage() {
             const data = await res.json();
 
             if (data.success) {
-                // Redirect to admin blog page
-                router.push("/admin/blog");
+                // Show success message about pending approval
+                if (data.data?.requiresApproval) {
+                    setError(""); // Clear any errors
+                    // Show success message
+                    alert("Registration successful! Your account is pending admin approval. You will be able to log in once an administrator approves your account.");
+                    // Redirect to login page
+                    router.push("/auth/login");
+                } else {
+                    // Old flow (shouldn't happen with new approval system)
+                    router.push("/admin/blog");
+                }
             } else {
                 setError(data.error || "Registration failed");
             }

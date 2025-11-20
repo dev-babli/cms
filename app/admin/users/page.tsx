@@ -12,7 +12,7 @@ interface User {
     email: string;
     name: string;
     role: 'admin' | 'editor' | 'author' | 'viewer';
-    status: 'active' | 'inactive' | 'suspended';
+    status: 'active' | 'inactive' | 'suspended' | 'pending';
     email_verified: boolean;
     last_login?: string;
     created_at: string;
@@ -124,11 +124,49 @@ export default function UsersPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'active': return 'bg-green-100 text-green-800';
-            case 'inactive': return 'bg-yellow-100 text-yellow-800';
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'inactive': return 'bg-gray-100 text-gray-800';
             case 'suspended': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
+
+    const handleApproveUser = async (userId: number) => {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: 'active' }),
+            });
+
+            if (res.ok) {
+                setUsers(users.map(user =>
+                    user.id === userId ? { ...user, status: 'active' as any } : user
+                ));
+            }
+        } catch (error) {
+            console.error("Failed to approve user:", error);
+        }
+    };
+
+    const handleRejectUser = async (userId: number) => {
+        if (!confirm("Are you sure you want to reject this user? They will be deleted.")) return;
+        
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                setUsers(users.filter(user => user.id !== userId));
+            }
+        } catch (error) {
+            console.error("Failed to reject user:", error);
+        }
+    };
+
+    const pendingUsers = users.filter(user => user.status === 'pending');
+    const activeUsers = users.filter(user => user.status !== 'pending');
 
     if (loading) {
         return (
@@ -167,7 +205,89 @@ export default function UsersPage() {
             {/* Content */}
             <div className="px-6 py-8">
                 <div className="max-w-7xl mx-auto">
-                    {/* Users Table */}
+                    {/* Pending Users Section */}
+                    {pendingUsers.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm mb-6">
+                            <div className="px-6 py-4 border-b border-yellow-200">
+                                <h2 className="text-lg font-medium text-yellow-900">
+                                    Pending Approval ({pendingUsers.length})
+                                </h2>
+                                <p className="text-sm text-yellow-700 mt-1">
+                                    These users are waiting for admin approval
+                                </p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-yellow-100">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
+                                                User
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
+                                                Role
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
+                                                Registered
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-yellow-200">
+                                        {pendingUsers.map((user) => (
+                                            <tr key={user.id} className="hover:bg-yellow-50">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="flex-shrink-0 h-10 w-10">
+                                                            <div className="h-10 w-10 rounded-full bg-yellow-300 flex items-center justify-center">
+                                                                <span className="text-sm font-medium text-yellow-800">
+                                                                    {user.name.charAt(0).toUpperCase()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="ml-4">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {user.name}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">
+                                                                {user.email}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                                                        {user.role}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {new Date(user.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                    <button
+                                                        onClick={() => handleApproveUser(user.id)}
+                                                        className="text-green-600 hover:text-green-900 font-medium"
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <span className="text-gray-300">|</span>
+                                                    <button
+                                                        onClick={() => handleRejectUser(user.id)}
+                                                        className="text-red-600 hover:text-red-900 font-medium"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* All Users Table */}
                     <div className="bg-white rounded-lg border shadow-sm">
                         <div className="px-6 py-4 border-b">
                             <h2 className="text-lg font-medium">All Users ({users.length})</h2>
@@ -228,6 +348,7 @@ export default function UsersPage() {
                                                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border-0 ${getStatusColor(user.status)}`}
                                                 >
                                                     <option value="active">Active</option>
+                                                    <option value="pending">Pending</option>
                                                     <option value="inactive">Inactive</option>
                                                     <option value="suspended">Suspended</option>
                                                 </select>

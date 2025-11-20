@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users, sessions } from '@/lib/auth/users';
+import { users } from '@/lib/auth/users';
+import { createServerClient } from '@/lib/supabase';
+import db from '@/lib/db';
 import { z } from 'zod';
 
 const RegisterSchema = z.object({
@@ -14,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, name, role = 'author' } = RegisterSchema.parse(body);
 
-    // Check if user already exists
+    // Check if user already exists in custom table
     const existingUser = await users.findByEmail(email);
     if (existingUser) {
       return NextResponse.json(
@@ -23,38 +25,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new user
-    const newUser = await users.create({
+    // Create user in Supabase Auth (secure authentication)
+    const supabase = createServerClient();
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      name,
-      role,
-    });
-
-    // Create session
-    const session = await sessions.create(newUser.id);
-
-    // Set cookie
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        user: newUser,
-        session: {
-          token: session.token,
-          expires_at: session.expires_at,
+      options: {
+        data: {
+          name,
+          role,
         },
+        emailRedirectTo: `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/auth/verify-email`,
       },
     });
 
-    response.cookies.set('auth-token', session.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
-    });
+    if (authError) {
+      // If user exists in Supabase Auth but not in our table, handle it
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          { success: false, error: 'User with this email already exists' },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json(
+        { success: false, error: authError.message },
+        { status: 400 }
+      );
+    }
 
-    return response;
+    if (!authData.user) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create user account' },
+        { status: 500 }
+      );
+    }
+
+    // Create custom user record with 'pending' status (admin approval required)
+    // Link with Supabase Auth user via supabase_user_id
+    const stmt = db.prepare(`
+      INSERT INTO users (email, name, role, status, email_verified, supabase_user_id)
+      VALUES (?, ?, ?, 'pending', ?, ?)
+      RETURNING *
+    `);
+    
+    const result = await stmt.run(
+      email,
+      name,
+      role,
+      authData.user.email_confirmed_at ? true : false,
+      authData.user.id
+    );
+
+    // Get the created user from result
+    const customUser = (result as any).row || (result as any).rows?.[0];
+
+    // Don't create session - user must wait for admin approval
+    return NextResponse.json({
+      success: true,
+      message: 'Registration successful. Your account is pending admin approval. You will be notified once approved.',
+      data: {
+        user: customUser ? {
+          id: customUser.id,
+          email: customUser.email,
+          name: customUser.name,
+          status: customUser.status,
+        } : null,
+        requiresApproval: true,
+        // Supabase will send email verification if configured
+        emailSent: !!authData.session,
+      },
+    });
   } catch (error) {
     console.error('Registration error:', error);
     

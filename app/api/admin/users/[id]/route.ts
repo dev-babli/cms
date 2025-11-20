@@ -6,7 +6,7 @@ const UpdateUserSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),
   role: z.enum(['admin', 'editor', 'author', 'viewer']).optional(),
-  status: z.enum(['active', 'inactive', 'suspended']).optional(),
+  status: z.enum(['active', 'inactive', 'suspended', 'pending']).optional(),
 });
 
 // Update user (admin only)

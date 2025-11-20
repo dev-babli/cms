@@ -9,11 +9,12 @@ export interface User {
   avatar?: string;
   bio?: string;
   role: 'admin' | 'editor' | 'author' | 'viewer';
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'pending';
   email_verified: boolean;
   last_login?: string;
   created_at: string;
   updated_at: string;
+  supabase_user_id?: string; // Link to Supabase Auth user
 }
 
 export interface CreateUserData {
@@ -46,10 +47,10 @@ export const users = {
     const saltRounds = 12;
     const password_hash = await bcrypt.hash(password, saltRounds);
     
-    // Insert user
+    // Insert user with 'pending' status for admin approval
     const stmt = db.prepare(`
       INSERT INTO users (email, password_hash, name, role, status, email_verified)
-      VALUES (?, ?, ?, ?, 'active', false)
+      VALUES (?, ?, ?, ?, 'pending', false)
       RETURNING *
     `);
     
