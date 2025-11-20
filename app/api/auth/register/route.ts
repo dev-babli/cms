@@ -27,6 +27,16 @@ export async function POST(request: NextRequest) {
 
     // Create user in Supabase Auth (secure authentication)
     const supabase = createServerClient();
+    
+    // Check if Supabase client is properly configured
+    if (!supabase) {
+      console.error('Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -40,15 +50,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
+      console.error('Supabase Auth error:', authError);
       // If user exists in Supabase Auth but not in our table, handle it
-      if (authError.message.includes('already registered')) {
+      if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
         return NextResponse.json(
           { success: false, error: 'User with this email already exists' },
           { status: 409 }
         );
       }
+      // Provide more user-friendly error messages
+      let errorMessage = authError.message;
+      if (authError.message.includes('Invalid API key')) {
+        errorMessage = 'Server configuration error. Please contact support.';
+      } else if (authError.message.includes('Email rate limit')) {
+        errorMessage = 'Too many registration attempts. Please try again later.';
+      }
       return NextResponse.json(
-        { success: false, error: authError.message },
+        { success: false, error: errorMessage },
         { status: 400 }
       );
     }
@@ -62,9 +80,10 @@ export async function POST(request: NextRequest) {
 
     // Create custom user record with 'pending' status (admin approval required)
     // Link with Supabase Auth user via supabase_user_id
+    // Note: password_hash is NULL for Supabase Auth users (authentication handled by Supabase)
     const stmt = db.prepare(`
-      INSERT INTO users (email, name, role, status, email_verified, supabase_user_id)
-      VALUES (?, ?, ?, 'pending', ?, ?)
+      INSERT INTO users (email, name, role, status, email_verified, supabase_user_id, password_hash)
+      VALUES (?, ?, ?, 'pending', ?, ?, NULL)
       RETURNING *
     `);
     
@@ -76,8 +95,15 @@ export async function POST(request: NextRequest) {
       authData.user.id
     );
 
-    // Get the created user from result
-    const customUser = (result as any).row || (result as any).rows?.[0];
+    // Get the created user from result (PostgreSQL returns rows in result.rows)
+    const customUser = (result as any)?.row || (result as any)?.rows?.[0];
+    
+    if (!customUser) {
+      console.error('Failed to retrieve created user from database');
+      // User was created in Supabase Auth, but we couldn't retrieve the custom record
+      // This is not ideal, but we should still return success
+      // The user can be manually linked later if needed
+    }
 
     // Don't create session - user must wait for admin approval
     return NextResponse.json({
@@ -96,20 +122,64 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    // Log full error in development, generic in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Registration error:', error);
+    } else {
+      console.error('Registration error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
       return NextResponse.json(
-        { success: false, error: `Validation failed: ${errorMessages}` },
+        { 
+          success: false, 
+          error: process.env.NODE_ENV === 'development' 
+            ? `Validation failed: ${errorMessages}`
+            : 'Invalid input data. Please check all fields and try again.'
+        },
         { status: 400 }
       );
     }
 
+    // Check if it's a Supabase configuration error
+    if (error instanceof Error && error.message.includes('Supabase')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: process.env.NODE_ENV === 'development'
+            ? error.message
+            : 'Server configuration error. Please contact support.'
+        },
+        { status: 500 }
+      );
+    }
+
+    // Check if it's a database connection error
+    if (error instanceof Error && (
+      error.message.includes('connection') || 
+      error.message.includes('database') ||
+      error.message.includes('timeout')
+    )) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Database connection error. Please try again in a moment.'
+        },
+        { status: 503 }
+      );
+    }
+
+    // Generic error
     return NextResponse.json(
-      { success: false, error: 'Registration failed' },
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'development'
+          ? (error instanceof Error ? error.message : 'Registration failed')
+          : 'Registration failed. Please try again.'
+      },
       { status: 500 }
     );
   }

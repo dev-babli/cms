@@ -19,9 +19,22 @@ export async function POST(request: NextRequest) {
       // Redirect to login page
       const response = NextResponse.redirect(new URL('/auth/login', request.url));
       
+      // Cookie configuration optimized for Vercel production
+      const isProduction = process.env.NODE_ENV === 'production';
+      
       response.cookies.set('auth-token', '', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 0, // Delete cookie
+        path: '/',
+        // Don't set domain - allows Vercel subdomains to work
+      });
+      
+      // Also clear Supabase session cookie if it exists
+      response.cookies.set('sb-access-token', '', {
+        httpOnly: true,
+        secure: isProduction,
         sameSite: 'lax',
         maxAge: 0,
         path: '/',
@@ -36,9 +49,22 @@ export async function POST(request: NextRequest) {
       message: 'Logged out successfully',
     });
 
+    // Cookie configuration optimized for Vercel production
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     response.cookies.set('auth-token', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 0, // Delete cookie
+      path: '/',
+      // Don't set domain - allows Vercel subdomains to work
+    });
+    
+    // Also clear Supabase session cookie if it exists
+    response.cookies.set('sb-access-token', '', {
+      httpOnly: true,
+      secure: isProduction,
       sameSite: 'lax',
       maxAge: 0,
       path: '/',
@@ -46,10 +72,41 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Logout error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Logout failed' },
+    // Log full error in development, generic in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Logout error:', error);
+    } else {
+      console.error('Logout error:', error instanceof Error ? error.message : 'Unknown error');
+    }
+    
+    // Even if logout fails, try to clear cookies
+    const response = NextResponse.json(
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'development'
+          ? (error instanceof Error ? error.message : 'Logout failed')
+          : 'Logout failed. Cookies cleared.'
+      },
       { status: 500 }
     );
+    
+    // Clear cookies anyway
+    const isProduction = process.env.NODE_ENV === 'production';
+    response.cookies.set('auth-token', '', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
+    response.cookies.set('sb-access-token', '', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
+    
+    return response;
   }
 }

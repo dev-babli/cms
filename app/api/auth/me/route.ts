@@ -31,9 +31,20 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Auth check error:', error);
+    // Log full error in development, generic in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Auth check error:', error);
+    } else {
+      console.error('Auth check error:', error instanceof Error ? error.message : 'Unknown error');
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Authentication check failed' },
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'development'
+          ? (error instanceof Error ? error.message : 'Authentication check failed')
+          : 'Authentication check failed. Please try logging in again.'
+      },
       { status: 500 }
     );
   }

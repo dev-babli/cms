@@ -30,8 +30,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError || !authData.user) {
+      // Provide more specific error messages in development
+      const errorMessage = process.env.NODE_ENV === 'development' && authError
+        ? authError.message
+        : 'Invalid email or password';
+      
+      // Log detailed error in development
+      if (process.env.NODE_ENV === 'development' && authError) {
+        console.error('Supabase Auth error:', authError);
+      }
+      
       return NextResponse.json(
-        { success: false, error: 'Invalid email or password' },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
@@ -88,40 +98,78 @@ export async function POST(request: NextRequest) {
     });
 
     // Set both cookies for compatibility
+    // Cookie configuration optimized for Vercel production
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     // Custom session cookie
     response.cookies.set('auth-token', session.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction, // HTTPS required in production
+      sameSite: 'lax', // Allows cross-site navigation while protecting against CSRF
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: '/',
+      // Don't set domain - allows Vercel subdomains to work
     });
 
     // Supabase session cookie (if available)
     if (authData.session?.access_token) {
       response.cookies.set('sb-access-token', authData.session.access_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
         maxAge: authData.session.expires_in || 3600,
         path: '/',
+        // Don't set domain - allows Vercel subdomains to work
       });
     }
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
+    // Log full error in development, generic in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Login error:', error);
+    } else {
+      console.error('Login error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
+      const errorMessages = error.issues.map(issue => 
+        `${issue.path.join('.')}: ${issue.message}`
+      ).join(', ');
+      
       return NextResponse.json(
-        { success: false, error: 'Invalid input data' },
+        { 
+          success: false, 
+          error: process.env.NODE_ENV === 'development' 
+            ? `Invalid input: ${errorMessages}`
+            : 'Invalid input data'
+        },
         { status: 400 }
       );
     }
 
+    // Check if it's a Supabase configuration error
+    if (error instanceof Error && error.message.includes('Supabase')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: process.env.NODE_ENV === 'development'
+            ? error.message
+            : 'Server configuration error. Please contact support.'
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Login failed' },
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'development'
+          ? (error instanceof Error ? error.message : 'Login failed')
+          : 'Login failed. Please try again.'
+      },
       { status: 500 }
     );
   }
 }
+

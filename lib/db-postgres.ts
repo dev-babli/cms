@@ -11,36 +11,71 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('supabase') 
     ? { rejectUnauthorized: false } 
     : false,
-  max: 20, // Maximum number of clients in the pool
+  max: 10, // Reduced for Supabase connection limits
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased timeout for Supabase
+  // Supabase connection pooler settings
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 // Test connection
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+pool.on('connect', (client) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Connected to PostgreSQL database');
+  }
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit the process - just log the error
+  // Supabase may terminate idle connections, which is normal
+  // The pool will automatically reconnect when needed
+  console.error('⚠️ Database pool error (will auto-reconnect):', err.message);
+  
+  // Only log full error in development
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Full error:', err);
+  }
 });
 
-// Helper function to execute queries
-export const query = async (text: string, params?: any[]) => {
+// Helper function to execute queries with retry logic
+export const query = async (text: string, params?: any[], retries = 2): Promise<any> => {
   const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    // Only log in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Executed query', { text: text.substring(0, 100), duration, rows: res.rowCount });
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await pool.query(text, params);
+      const duration = Date.now() - start;
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Executed query', { text: text.substring(0, 100), duration, rows: res.rowCount });
+      }
+      return res;
+    } catch (error: any) {
+      // Check if it's a connection error that we should retry
+      const isConnectionError = error.code === 'ECONNREFUSED' || 
+                                 error.code === 'ETIMEDOUT' ||
+                                 error.message?.includes('terminated') ||
+                                 error.message?.includes('shutdown');
+      
+      if (isConnectionError && attempt < retries) {
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+      
+      // Log and throw the error
+      console.error('Query error', { 
+        text: text.substring(0, 100), 
+        error: error.message,
+        code: error.code,
+        attempt: attempt + 1 
+      });
+      throw error;
     }
-    return res;
-  } catch (error) {
-    console.error('Query error', { text, error });
-    throw error;
   }
+  
+  throw new Error('Query failed after retries');
 };
 
 // Helper function to get a single row
@@ -61,6 +96,8 @@ export const execute = async (text: string, params?: any[]) => {
   return {
     lastInsertRowid: result.rows[0]?.id || null,
     changes: result.rowCount || 0,
+    rows: result.rows, // Include rows for RETURNING clauses
+    row: result.rows[0] || null, // Convenience accessor for first row
   };
 };
 

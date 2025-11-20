@@ -25,13 +25,25 @@ export const createServerClient = () => {
   // Falls back to anon key if service role not available
   const key = serviceRoleKey || anonKey;
   
+  if (!supabaseUrl) {
+    const errorMsg = process.env.NODE_ENV === 'production'
+      ? 'Server configuration error. Please contact support.'
+      : 'SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL is not set!';
+    console.error('❌', errorMsg);
+    throw new Error('Supabase URL is not configured');
+  }
+  
   if (!key) {
-    console.warn('⚠️ Supabase key not found. Use SUPABASE_SERVICE_ROLE_KEY (recommended) or SUPABASE_ANON_KEY.');
+    const errorMsg = process.env.NODE_ENV === 'production'
+      ? 'Server configuration error. Please contact support.'
+      : 'Supabase key not found. Use SUPABASE_SERVICE_ROLE_KEY (recommended) or SUPABASE_ANON_KEY.';
+    console.error('❌', errorMsg);
+    throw new Error('Supabase API key is not configured');
   }
   
   return createClient(
     supabaseUrl,
-    key || '',
+    key,
     {
       auth: {
         autoRefreshToken: false,

@@ -8,6 +8,25 @@ ADD COLUMN IF NOT EXISTS supabase_user_id UUID;
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_users_supabase_id ON users(supabase_user_id);
 
+-- Make password_hash nullable since we're using Supabase Auth
+-- Users created via Supabase Auth don't need password_hash in our custom table
+DO $$
+BEGIN
+    -- Check if password_hash column exists and is NOT NULL
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name = 'password_hash'
+        AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+        RAISE NOTICE 'Made password_hash nullable for Supabase Auth integration.';
+    ELSE
+        RAISE NOTICE 'password_hash column is already nullable or does not exist.';
+    END IF;
+END $$;
+
 -- Add password_reset_tokens table for custom password reset (if using hybrid)
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id SERIAL PRIMARY KEY,
