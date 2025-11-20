@@ -9,10 +9,43 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get('published') === 'true';
     
     const posts = blogPosts.getAll(published);
-    return NextResponse.json({ success: true, data: posts });
+    
+    // Enable CORS for React app
+    return NextResponse.json(
+      { success: true, data: posts },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Failed to fetch blog posts' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch blog posts' },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   }
+}
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -47,13 +80,22 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    return NextResponse.json({ 
-      success: true, 
-      data: {
-        id: result.lastInsertRowid,
-        ...validated,
+    return NextResponse.json(
+      { 
+        success: true, 
+        data: {
+          id: result.lastInsertRowid,
+          ...validated,
+        }
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
       }
-    });
+    );
   } catch (error) {
     console.error('Blog post creation error:', error);
     
@@ -62,14 +104,34 @@ export async function POST(request: NextRequest) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
-      return NextResponse.json({ 
-        success: false, 
-        error: `Validation failed: ${errorMessages}` 
-      }, { status: 400 });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Validation failed: ${errorMessages}` 
+        },
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
     }
     
     const errorMessage = error instanceof Error ? error.message : 'Failed to create blog post';
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: errorMessage },
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }
+    );
   }
 }
 

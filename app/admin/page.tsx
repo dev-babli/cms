@@ -40,6 +40,22 @@ export default async function AdminDashboard() {
       count: 6,
     },
     {
+      title: "Job Postings",
+      description: "Careers & openings",
+      href: "/admin/jobs",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 14l9-5-9-5-9 5 9 5zm0 0v7"
+          />
+        </svg>
+      ),
+      count: 0,
+    },
+    {
       title: "Pages",
       description: "Static pages & content",
       href: "/admin/pages",
@@ -71,14 +87,13 @@ export default async function AdminDashboard() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div>
-              <h1 className="text-xl font-semibold">Emscale CMS</h1>
+              <h1 className="text-xl font-semibold">Intellectt CMS</h1>
+              <p className="text-xs text-muted-foreground">Content Management System</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link href="/">
-                <button className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  View Site →
-                </button>
-              </Link>
+              <span className="text-sm text-muted-foreground">
+                Intellectt CMS
+              </span>
               <form action="/api/auth/logout" method="POST">
                 <button 
                   type="submit"

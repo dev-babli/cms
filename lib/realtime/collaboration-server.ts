@@ -1,5 +1,4 @@
 import { Server } from 'socket.io';
-import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 
 export interface CollaborationUser {
   id: string;
@@ -36,7 +35,7 @@ export interface Operation {
 }
 
 class CollaborationServer {
-  private io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
+  private io: Server;
   private documents: Map<string, DocumentState> = new Map();
   private userSessions: Map<string, string> = new Map(); // userId -> documentId
 

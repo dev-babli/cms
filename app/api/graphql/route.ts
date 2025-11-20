@@ -117,13 +117,38 @@ const yoga = createYoga({
   fetchAPI: { Response },
 });
 
-// Properly typed handlers for Next.js 15
+// CORS headers for React app integration
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
+// Properly typed handlers for Next.js 15 with CORS
 export async function GET(request: Request) {
-  return yoga.fetch(request);
+  const response = await yoga.fetch(request);
+  // Add CORS headers to response
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
 }
 
 export async function POST(request: Request) {
-  return yoga.fetch(request);
+  const response = await yoga.fetch(request);
+  // Add CORS headers to response
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
 }
 
 

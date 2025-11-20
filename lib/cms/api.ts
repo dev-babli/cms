@@ -1,5 +1,5 @@
 import db from '../db';
-import type { BlogPost, Service, TeamMember, Page, Testimonial } from './types';
+import type { BlogPost, Service, TeamMember, Page, Testimonial, JobPosting } from './types';
 
 // Blog Posts
 export const blogPosts = {
@@ -105,6 +105,59 @@ export const teamMembers = {
   
   delete: (id: number) => {
     return db.prepare('DELETE FROM team_members WHERE id = ?').run(id);
+  },
+};
+
+// Job Postings
+export const jobPostings = {
+  getAll: (published = false) => {
+    const query = published
+      ? 'SELECT * FROM job_postings WHERE published = 1 ORDER BY created_at DESC'
+      : 'SELECT * FROM job_postings ORDER BY created_at DESC';
+    return db.prepare(query).all();
+  },
+
+  getBySlug: (slug: string) => {
+    return db.prepare('SELECT * FROM job_postings WHERE slug = ?').get(slug);
+  },
+
+  create: (job: Omit<JobPosting, 'id'>) => {
+    const stmt = db.prepare(`
+      INSERT INTO job_postings (title, slug, location, employment_type, categories, description, requirements, skills, salary_range, apply_url, remote, published)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      job.title,
+      job.slug,
+      job.location || '',
+      job.employment_type || '',
+      job.categories || '',
+      job.description || '',
+      job.requirements || '',
+      job.skills || '',
+      job.salary_range || '',
+      job.apply_url || '',
+      job.remote ? 1 : 0,
+      job.published ? 1 : 0
+    );
+  },
+
+  update: (id: number, job: Partial<JobPosting>) => {
+    const fields = Object.keys(job)
+      .filter((k) => k !== 'id')
+      .map((k) => `${k} = ?`)
+      .join(', ');
+    const values = Object.values(job).filter(
+      (_, i) => Object.keys(job)[i] !== 'id'
+    );
+    const stmt = db.prepare(
+      `UPDATE job_postings SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+    );
+    return stmt.run(...values, id);
+  },
+
+  delete: (id: number) => {
+    return db.prepare('DELETE FROM job_postings WHERE id = ?').run(id);
   },
 };
 

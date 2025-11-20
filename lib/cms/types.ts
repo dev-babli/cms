@@ -88,6 +88,25 @@ export const MediaSchema = z.object({
 
 export type Media = z.infer<typeof MediaSchema>;
 
+// Job Posting Schema
+export const JobPostingSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1),
+  slug: z.string().min(1),
+  location: z.string().optional(),
+  employment_type: z.string().optional(),
+  categories: z.string().optional(),
+  description: z.string().optional(),
+  requirements: z.string().optional(),
+  skills: z.string().optional(),
+  salary_range: z.string().optional(),
+  apply_url: z.string().optional(),
+  remote: z.boolean().default(false),
+  published: z.boolean().default(false),
+});
+
+export type JobPosting = z.infer<typeof JobPostingSchema>;
+
 
 
 

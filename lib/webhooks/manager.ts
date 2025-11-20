@@ -105,7 +105,7 @@ export class WebhookManager {
       webhook.timeout
     );
 
-    return this.getWebhook(result.lastInsertRowid)!;
+    return this.getWebhook(Number(result.lastInsertRowid))!;
   }
 
   // Get webhook by ID

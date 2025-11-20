@@ -90,7 +90,6 @@ export class MediaTransformService {
     // Apply quality adjustments
     if (blur) pipeline = pipeline.blur(blur);
     if (brightness !== undefined) pipeline = pipeline.modulate({ brightness });
-    if (contrast !== undefined) pipeline = pipeline.modulate({ contrast });
     if (saturation !== undefined) pipeline = pipeline.modulate({ saturation });
 
     // Apply format and quality

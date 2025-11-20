@@ -1,5 +1,5 @@
 // Custom Tiptap extensions for social media embeds
-import { Node } from '@tiptap/core';
+import { Node, RawCommands } from '@tiptap/core';
 
 // Instagram Embed Extension
 export const Instagram = Node.create({
@@ -51,7 +51,7 @@ export const Instagram = Node.create({
             attrs: { url },
           });
         },
-    };
+    } as Partial<RawCommands>;
   },
 });
 
@@ -104,7 +104,7 @@ export const Twitter = Node.create({
             attrs: { url },
           });
         },
-    };
+    } as Partial<RawCommands>;
   },
 });
 
@@ -157,7 +157,7 @@ export const TikTok = Node.create({
             attrs: { url },
           });
         },
-    };
+    } as Partial<RawCommands>;
   },
 });
 

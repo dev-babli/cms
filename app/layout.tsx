@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-    title: "Emscale - Transforming Business with Intelligent AI Solutions",
-    description: "Emscale delivers cutting-edge AI technologies that revolutionize how companies operate.",
+    title: "Intellectt CMS - Content Management System",
+    description: "Manage content for Intellectt website - Blog posts, Services, Team members, and more.",
 };
 
 export default function RootLayout({

@@ -205,8 +205,8 @@ export class AITaggingService {
       // Generate caption from objects and context
       if (objects && objects.length > 0) {
         const objectNames = objects
-          .filter(obj => obj.confidence > 0.7)
-          .map(obj => obj.name)
+          .filter((obj: any) => obj.confidence > 0.7)
+          .map((obj: any) => obj.name)
           .slice(0, 3);
         
         if (objectNames.length > 0) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { blogPosts } from '@/lib/cms/api';
-import { BlogPostSchema } from '@/lib/cms/types';
+import { services } from '@/lib/cms/api';
+import { ServiceSchema } from '@/lib/cms/types';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,11 +23,14 @@ export async function GET(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const post = blogPosts.getBySlug(paramId);
     
-    if (!post) {
+    // Get all services and find by ID
+    const allServices = services.getAll(false);
+    const service = allServices.find((s: any) => s.id === id);
+    
+    if (!service) {
       return NextResponse.json(
-        { success: false, error: 'Post not found' },
+        { success: false, error: 'Service not found' },
         {
           status: 404,
           headers: corsHeaders,
@@ -36,12 +39,12 @@ export async function GET(
     }
     
     return NextResponse.json(
-      { success: true, data: post },
+      { success: true, data: service },
       { headers: corsHeaders }
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch post' },
+      { success: false, error: 'Failed to fetch service' },
       {
         status: 500,
         headers: corsHeaders,
@@ -58,16 +61,16 @@ export async function PUT(
     const { id: paramId } = await params;
     const id = parseInt(paramId);
     const body = await request.json();
-    const validated = BlogPostSchema.partial().parse(body);
+    const validated = ServiceSchema.partial().parse(body);
     
-    const result = blogPosts.update(id, validated);
+    const result = services.update(id, validated);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to update post' },
+      { success: false, error: 'Failed to update service' },
       {
         status: 500,
         headers: corsHeaders,
@@ -83,14 +86,14 @@ export async function DELETE(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const result = blogPosts.delete(id);
+    const result = services.delete(id);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to delete post' },
+      { success: false, error: 'Failed to delete service' },
       {
         status: 500,
         headers: corsHeaders,
@@ -98,6 +101,4 @@ export async function DELETE(
     );
   }
 }
-
-
 

@@ -142,7 +142,7 @@ export const sessions = {
     const result = stmt.run(userId, token, expiresAt.toISOString());
     
     return {
-      id: result.lastInsertRowid,
+      id: Number(result.lastInsertRowid),
       user_id: userId,
       token,
       expires_at: expiresAt.toISOString(),
