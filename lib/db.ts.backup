@@ -1,0 +1,169 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+
+// On Vercel, use /tmp directory (writable) instead of process.cwd() (read-only)
+const isVercel = process.env.VERCEL === '1';
+const dbPath = isVercel 
+  ? '/tmp/content.db'
+  : path.join(process.cwd(), 'content.db');
+
+// Ensure directory exists (for local development)
+if (!isVercel) {
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+}
+
+let db: Database.Database;
+
+try {
+  db = new Database(dbPath);
+} catch (error) {
+  console.error('Failed to initialize database:', error);
+  // Create a fallback in-memory database for development
+  db = new Database(':memory:');
+  console.warn('Using in-memory database as fallback');
+}
+
+// Initialize database tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT,
+    meta_description TEXT,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS blog_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    excerpt TEXT,
+    content TEXT,
+    author TEXT,
+    featured_image TEXT,
+    category TEXT,
+    tags TEXT,
+    published BOOLEAN DEFAULT 0,
+    publish_date DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS services (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    content TEXT,
+    icon TEXT,
+    featured_image TEXT,
+    price TEXT,
+    features TEXT,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    position TEXT,
+    bio TEXT,
+    image TEXT,
+    email TEXT,
+    linkedin TEXT,
+    twitter TEXT,
+    order_index INTEGER DEFAULT 0,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS testimonials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    position TEXT,
+    company TEXT,
+    content TEXT,
+    image TEXT,
+    rating INTEGER DEFAULT 5,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT NOT NULL,
+    original_name TEXT,
+    url TEXT NOT NULL,
+    mime_type TEXT,
+    size INTEGER,
+    alt_text TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    avatar TEXT,
+    bio TEXT,
+    role TEXT DEFAULT 'author',
+    status TEXT DEFAULT 'active',
+    email_verified BOOLEAN DEFAULT 0,
+    last_login DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    description TEXT,
+    color TEXT,
+    icon TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS job_postings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    location TEXT,
+    employment_type TEXT,
+    categories TEXT,
+    description TEXT,
+    requirements TEXT,
+    skills TEXT,
+    salary_range TEXT,
+    apply_url TEXT,
+    remote BOOLEAN DEFAULT 0,
+    published BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+export default db;
+
+

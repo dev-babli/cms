@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const token = request.cookies.get('auth-token')?.value;
     
     if (token) {
-      sessions.delete(token);
+      await sessions.delete(token);
     }
 
     // Check if this is a form submission (redirect) or API call (JSON)

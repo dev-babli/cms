@@ -25,7 +25,7 @@ export async function GET(
     const id = parseInt(paramId);
     
     // Get all services and find by ID
-    const allServices = services.getAll(false);
+    const allServices = await services.getAll(false);
     const service = allServices.find((s: any) => s.id === id);
     
     if (!service) {
@@ -63,7 +63,7 @@ export async function PUT(
     const body = await request.json();
     const validated = ServiceSchema.partial().parse(body);
     
-    const result = services.update(id, validated);
+    const result = await services.update(id, validated);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }
@@ -86,7 +86,7 @@ export async function DELETE(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const result = services.delete(id);
+    const result = await services.delete(id);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }

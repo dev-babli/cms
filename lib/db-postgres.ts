@@ -58,15 +58,6 @@ export const queryAll = async (text: string, params?: any[]) => {
 // Helper function to execute (INSERT/UPDATE/DELETE)
 export const execute = async (text: string, params?: any[]) => {
   const result = await query(text, params);
-  // If using RETURNING *, return the row data
-  if (text.toUpperCase().includes('RETURNING')) {
-    return {
-      lastInsertRowid: result.rows[0]?.id || null,
-      changes: result.rowCount || 0,
-      row: result.rows[0] || null,
-      rows: result.rows || [],
-    };
-  }
   return {
     lastInsertRowid: result.rows[0]?.id || null,
     changes: result.rowCount || 0,

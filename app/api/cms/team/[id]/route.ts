@@ -25,7 +25,7 @@ export async function GET(
     const id = parseInt(paramId);
     
     // Get all members and find by ID
-    const allMembers = teamMembers.getAll(false);
+    const allMembers = await teamMembers.getAll(false);
     const member = allMembers.find((m: any) => m.id === id);
     
     if (!member) {
@@ -63,7 +63,7 @@ export async function PUT(
     const body = await request.json();
     const validated = TeamMemberSchema.partial().parse(body);
     
-    const result = teamMembers.update(id, validated);
+    const result = await teamMembers.update(id, validated);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }
@@ -86,7 +86,7 @@ export async function DELETE(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const result = teamMembers.delete(id);
+    const result = await teamMembers.delete(id);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }

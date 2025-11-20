@@ -172,7 +172,7 @@ export class TenancyManager {
   }
 
   // Get all tenants
-  getAllTenants(status?: 'active' | 'suspended' | 'pending'): Tenant[] {
+  async getAllTenants(status?: 'active' | 'suspended' | 'pending'): Promise<Tenant[]> {
     let query = 'SELECT * FROM tenants';
     const params: any[] = [];
 
@@ -184,7 +184,7 @@ export class TenancyManager {
     query += ' ORDER BY created_at DESC';
 
     const stmt = db.prepare(query);
-    const rows = stmt.all(...params) as any[];
+    const rows = await stmt.all(...params) as any[];
 
     return rows.map(row => this.parseTenant(row));
   }
@@ -238,18 +238,18 @@ export class TenancyManager {
   }
 
   // Delete tenant
-  deleteTenant(id: string): boolean {
+  async deleteTenant(id: string): Promise<boolean> {
     // Delete all tenant data
-    db.prepare('DELETE FROM blog_posts WHERE tenant_id = ?').run(id);
-    db.prepare('DELETE FROM services WHERE tenant_id = ?').run(id);
-    db.prepare('DELETE FROM team_members WHERE tenant_id = ?').run(id);
-    db.prepare('DELETE FROM media WHERE tenant_id = ?').run(id);
-    db.prepare('DELETE FROM users WHERE tenant_id = ?').run(id);
-    db.prepare('DELETE FROM tenant_usage WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM blog_posts WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM services WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM team_members WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM media WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM users WHERE tenant_id = ?').run(id);
+    await db.prepare('DELETE FROM tenant_usage WHERE tenant_id = ?').run(id);
     
     const stmt = db.prepare('DELETE FROM tenants WHERE id = ?');
-    const result = stmt.run(id);
-
+    const result = await stmt.run(id);
+    
     console.log(`Tenant deleted: ${id}`);
     return result.changes > 0;
   }
@@ -400,14 +400,14 @@ export class TenancyManager {
   }
 
   // Get tenant statistics
-  getTenantStats(): {
+  async getTenantStats(): Promise<{
     total: number;
     active: number;
     suspended: number;
     pending: number;
     byPlan: Record<string, number>;
-  } {
-    const allTenants = this.getAllTenants();
+  }> {
+    const allTenants = await this.getAllTenants();
     
     const byPlan: Record<string, number> = {};
     for (const tenant of allTenants) {

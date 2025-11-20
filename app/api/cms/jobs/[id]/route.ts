@@ -22,7 +22,7 @@ export async function GET(
   try {
     const { id } = await params;
     const jobId = parseInt(id);
-    const allJobs = jobPostings.getAll(false);
+    const allJobs = await jobPostings.getAll(false);
     const job = allJobs.find((item: any) => item.id === jobId);
 
     if (!job) {
@@ -51,7 +51,7 @@ export async function PUT(
     const body = await request.json();
     const validated = JobPostingSchema.partial().parse(body);
 
-    const result = jobPostings.update(jobId, validated);
+    const result = await jobPostings.update(jobId, validated);
     return NextResponse.json({ success: true, data: result }, { headers: corsHeaders });
   } catch (error) {
     return NextResponse.json(
@@ -68,7 +68,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const jobId = parseInt(id);
-    const result = jobPostings.delete(jobId);
+    const result = await jobPostings.delete(jobId);
     return NextResponse.json({ success: true, data: result }, { headers: corsHeaders });
   } catch (error) {
     return NextResponse.json(

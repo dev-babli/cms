@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     // Find user with password
-    const userWithPassword = users.findByEmailWithPassword(email);
+    const userWithPassword = await users.findByEmailWithPassword(email);
     if (!userWithPassword) {
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Update last login
-    users.updateLastLogin(userWithPassword.id);
+    await users.updateLastLogin(userWithPassword.id);
 
     // Create session
-    const session = sessions.create(userWithPassword.id);
+    const session = await sessions.create(userWithPassword.id);
 
     // Remove password from response
     const { password_hash, ...user } = userWithPassword;

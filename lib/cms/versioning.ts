@@ -1,34 +1,43 @@
 import db from '../db';
 
 // Initialize version history table
-db.exec(`
-  CREATE TABLE IF NOT EXISTS content_versions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    document_type TEXT NOT NULL,
-    document_id INTEGER NOT NULL,
-    version_number INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    changed_by TEXT,
-    change_description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(document_type, document_id, version_number)
-  );
+let tableInitialized = false;
 
-  CREATE INDEX IF NOT EXISTS idx_versions_lookup 
-  ON content_versions(document_type, document_id, version_number DESC);
-`);
+async function initTable() {
+  if (tableInitialized) return;
+  
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS content_versions (
+      id SERIAL PRIMARY KEY,
+      document_type TEXT NOT NULL,
+      document_id INTEGER NOT NULL,
+      version_number INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      changed_by TEXT,
+      change_description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(document_type, document_id, version_number)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_versions_lookup 
+    ON content_versions(document_type, document_id, version_number DESC);
+  `);
+  
+  tableInitialized = true;
+}
 
 export const versioning = {
   // Save a new version
-  saveVersion: (
+  saveVersion: async (
     documentType: string,
     documentId: number,
     content: any,
     changedBy?: string,
     description?: string
   ) => {
+    await initTable();
     // Get latest version number
-    const latestVersion = db
+    const latestVersion = await db
       .prepare('SELECT MAX(version_number) as max FROM content_versions WHERE document_type = ? AND document_id = ?')
       .get(documentType, documentId) as { max: number | null };
     
@@ -39,7 +48,7 @@ export const versioning = {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     
-    return stmt.run(
+    return await stmt.run(
       documentType,
       documentId,
       newVersionNumber,
@@ -50,22 +59,24 @@ export const versioning = {
   },
 
   // Get all versions for a document
-  getVersions: (documentType: string, documentId: number) => {
+  getVersions: async (documentType: string, documentId: number) => {
+    await initTable();
     const stmt = db.prepare(`
       SELECT * FROM content_versions 
       WHERE document_type = ? AND document_id = ?
       ORDER BY version_number DESC
     `);
-    return stmt.all(documentType, documentId);
+    return await stmt.all(documentType, documentId);
   },
 
   // Get specific version
-  getVersion: (documentType: string, documentId: number, versionNumber: number) => {
+  getVersion: async (documentType: string, documentId: number, versionNumber: number) => {
+    await initTable();
     const stmt = db.prepare(`
       SELECT * FROM content_versions 
       WHERE document_type = ? AND document_id = ? AND version_number = ?
     `);
-    const result = stmt.get(documentType, documentId, versionNumber) as any;
+    const result = await stmt.get(documentType, documentId, versionNumber) as any;
     if (result) {
       result.content = JSON.parse(result.content);
     }
@@ -73,8 +84,8 @@ export const versioning = {
   },
 
   // Restore to a specific version
-  restoreVersion: (documentType: string, documentId: number, versionNumber: number) => {
-    const version = versioning.getVersion(documentType, documentId, versionNumber);
+  restoreVersion: async (documentType: string, documentId: number, versionNumber: number) => {
+    const version = await versioning.getVersion(documentType, documentId, versionNumber);
     if (!version) {
       throw new Error('Version not found');
     }
@@ -85,8 +96,9 @@ export const versioning = {
   },
 
   // Get version count
-  getVersionCount: (documentType: string, documentId: number) => {
-    const result = db.prepare(`
+  getVersionCount: async (documentType: string, documentId: number) => {
+    await initTable();
+    const result = await db.prepare(`
       SELECT COUNT(*) as count FROM content_versions 
       WHERE document_type = ? AND document_id = ?
     `).get(documentType, documentId) as { count: number };

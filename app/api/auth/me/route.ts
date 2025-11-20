@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = sessions.findByToken(token);
+    const session = await sessions.findByToken(token);
     if (!session) {
       return NextResponse.json(
         { success: false, error: 'Invalid or expired session' },

@@ -131,17 +131,17 @@ export class AnalyticsService {
   }
 
   // Get analytics for date range
-  getAnalytics(options: {
+  async getAnalytics(options: {
     tenant_id?: string;
     start_date?: string;
     end_date?: string;
-  }): {
+  }): Promise<{
     totalEvents: number;
     totalPageViews: number;
     uniqueVisitors: number;
     topEvents: Array<{ event_type: string; count: number }>;
     topPages: Array<{ url: string; views: number }>;
-  } {
+  }> {
     const { tenant_id, start_date, end_date } = options;
 
     let whereClause = '1=1';
@@ -163,22 +163,22 @@ export class AnalyticsService {
     }
 
     // Total events
-    const totalEvents = db.prepare(`
+    const totalEvents = await db.prepare(`
       SELECT COUNT(*) as count FROM analytics_events WHERE ${whereClause}
     `).get(...params) as any;
 
     // Total page views
-    const totalPageViews = db.prepare(`
+    const totalPageViews = await db.prepare(`
       SELECT COUNT(*) as count FROM page_views WHERE ${whereClause}
     `).get(...params) as any;
 
     // Unique visitors (by IP address)
-    const uniqueVisitors = db.prepare(`
+    const uniqueVisitors = await db.prepare(`
       SELECT COUNT(DISTINCT ip_address) as count FROM page_views WHERE ${whereClause}
     `).get(...params) as any;
 
     // Top events
-    const topEvents = db.prepare(`
+    const topEvents = await db.prepare(`
       SELECT event_type, COUNT(*) as count
       FROM analytics_events
       WHERE ${whereClause}
@@ -188,7 +188,7 @@ export class AnalyticsService {
     `).all(...params) as any[];
 
     // Top pages
-    const topPages = db.prepare(`
+    const topPages = await db.prepare(`
       SELECT url, COUNT(*) as views
       FROM page_views
       WHERE ${whereClause}
@@ -207,20 +207,20 @@ export class AnalyticsService {
   }
 
   // Get content performance
-  getContentPerformance(resourceType: string, resourceId: string): ContentPerformance {
-    const views = db.prepare(`
+  async getContentPerformance(resourceType: string, resourceId: string): Promise<ContentPerformance> {
+    const views = await db.prepare(`
       SELECT COUNT(*) as count
       FROM page_views
       WHERE url LIKE ?
     `).get(`%/${resourceId}%`) as any;
 
-    const uniqueVisitors = db.prepare(`
+    const uniqueVisitors = await db.prepare(`
       SELECT COUNT(DISTINCT ip_address) as count
       FROM page_views
       WHERE url LIKE ?
     `).get(`%/${resourceId}%`) as any;
 
-    const avgDuration = db.prepare(`
+    const avgDuration = await db.prepare(`
       SELECT AVG(duration) as avg
       FROM page_views
       WHERE url LIKE ? AND duration IS NOT NULL
@@ -279,11 +279,11 @@ export class AnalyticsService {
   }
 
   // Get user behavior funnel
-  getUserFunnel(steps: string[], tenantId?: string): Array<{
+  async getUserFunnel(steps: string[], tenantId?: string): Promise<Array<{
     step: string;
     users: number;
     dropoffRate: number;
-  }> {
+  }>> {
     const results: Array<{ step: string; users: number; dropoffRate: number }> = [];
     let previousCount = 0;
 
@@ -302,7 +302,7 @@ export class AnalyticsService {
         params.push(tenantId);
       }
 
-      const result = db.prepare(query).get(...params) as any;
+      const result = await db.prepare(query).get(...params) as any;
       const count = result.count;
 
       const dropoffRate = i > 0 && previousCount > 0
@@ -322,13 +322,13 @@ export class AnalyticsService {
   }
 
   // Get time series data
-  getTimeSeries(options: {
+  async getTimeSeries(options: {
     metric: 'events' | 'pageviews' | 'users';
     interval: 'hour' | 'day' | 'week' | 'month';
     start_date: string;
     end_date: string;
     tenant_id?: string;
-  }): Array<{ date: string; value: number }> {
+  }): Promise<Array<{ date: string; value: number }>> {
     const { metric, interval, start_date, end_date, tenant_id } = options;
 
     let table = metric === 'events' ? 'analytics_events' : 'page_views';
@@ -362,7 +362,7 @@ export class AnalyticsService {
       params.push(tenant_id);
     }
 
-    const results = db.prepare(`
+    const results = await db.prepare(`
       SELECT strftime('${dateFormat}', timestamp) as date, ${selectClause}
       FROM ${table}
       WHERE ${whereClause}
@@ -374,14 +374,14 @@ export class AnalyticsService {
   }
 
   // Clean up old analytics data
-  cleanupOldData(daysToKeep: number = 90): number {
+  async cleanupOldData(daysToKeep: number = 90): Promise<number> {
     const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000).toISOString();
 
-    const eventsDeleted = db.prepare(`
+    const eventsDeleted = await db.prepare(`
       DELETE FROM analytics_events WHERE timestamp < ?
     `).run(cutoffDate);
 
-    const pageViewsDeleted = db.prepare(`
+    const pageViewsDeleted = await db.prepare(`
       DELETE FROM page_views WHERE timestamp < ?
     `).run(cutoffDate);
 
@@ -390,12 +390,12 @@ export class AnalyticsService {
   }
 
   // Export analytics data
-  exportData(options: {
+  async exportData(options: {
     start_date: string;
     end_date: string;
     tenant_id?: string;
     format: 'json' | 'csv';
-  }): string {
+  }): Promise<string> {
     const { start_date, end_date, tenant_id, format } = options;
 
     let whereClause = 'timestamp BETWEEN ? AND ?';
@@ -406,7 +406,7 @@ export class AnalyticsService {
       params.push(tenant_id);
     }
 
-    const events = db.prepare(`
+    const events = await db.prepare(`
       SELECT * FROM analytics_events WHERE ${whereClause}
     `).all(...params) as any[];
 

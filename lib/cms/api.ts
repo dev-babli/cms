@@ -3,130 +3,139 @@ import type { BlogPost, Service, TeamMember, Page, Testimonial, JobPosting } fro
 
 // Blog Posts
 export const blogPosts = {
-  getAll: (published = false) => {
+  getAll: async (published = false) => {
     const query = published 
-      ? 'SELECT * FROM blog_posts WHERE published = 1 ORDER BY publish_date DESC'
+      ? 'SELECT * FROM blog_posts WHERE published = true ORDER BY publish_date DESC'
       : 'SELECT * FROM blog_posts ORDER BY created_at DESC';
-    return db.prepare(query).all();
+    return await db.prepare(query).all();
   },
   
-  getBySlug: (slug: string) => {
-    return db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug);
+  getBySlug: async (slug: string) => {
+    const result = await db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug);
+    return result as BlogPost | null;
   },
   
-  create: (post: Omit<BlogPost, 'id'>) => {
+  create: async (post: Omit<BlogPost, 'id'>) => {
     const stmt = db.prepare(`
       INSERT INTO blog_posts (slug, title, excerpt, content, author, featured_image, category, tags, published, publish_date)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING *
     `);
-    return stmt.run(
+    return await stmt.run(
       post.slug, post.title, post.excerpt || '', post.content || '', 
       post.author || '', post.featured_image || '', post.category || '', 
-      post.tags || '', post.published ? 1 : 0, post.publish_date || new Date().toISOString()
+      post.tags || '', post.published || false, post.publish_date || new Date().toISOString()
     );
   },
   
-  update: (id: number, post: Partial<BlogPost>) => {
-    const fields = Object.keys(post).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    const values = Object.values(post).filter((_, i) => Object.keys(post)[i] !== 'id');
-    const stmt = db.prepare(`UPDATE blog_posts SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`);
-    return stmt.run(...values, id);
+  update: async (id: number, post: Partial<BlogPost>) => {
+    const fields = Object.keys(post).filter(k => k !== 'id');
+    const setClause = fields.map(() => '?').join(', ');
+    const placeholders = fields.map((k, i) => `${k} = ?`).join(', ');
+    const values = fields.map(field => post[field as keyof BlogPost]);
+    const stmt = db.prepare(`UPDATE blog_posts SET ${placeholders}, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *`);
+    return await stmt.run(...values, id);
   },
   
-  delete: (id: number) => {
-    return db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
+  delete: async (id: number) => {
+    return await db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
   },
 };
 
 // Services
 export const services = {
-  getAll: (published = false) => {
+  getAll: async (published = false) => {
     const query = published 
-      ? 'SELECT * FROM services WHERE published = 1 ORDER BY created_at DESC'
+      ? 'SELECT * FROM services WHERE published = true ORDER BY created_at DESC'
       : 'SELECT * FROM services ORDER BY created_at DESC';
-    return db.prepare(query).all();
+    return await db.prepare(query).all();
   },
   
-  getBySlug: (slug: string) => {
-    return db.prepare('SELECT * FROM services WHERE slug = ?').get(slug);
+  getBySlug: async (slug: string) => {
+    return await db.prepare('SELECT * FROM services WHERE slug = $1').get(slug);
   },
   
-  create: (service: Omit<Service, 'id'>) => {
+  create: async (service: Omit<Service, 'id'>) => {
     const stmt = db.prepare(`
       INSERT INTO services (slug, title, description, content, icon, featured_image, price, features, published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
     `);
-    return stmt.run(
+    return await stmt.run(
       service.slug, service.title, service.description || '', service.content || '',
       service.icon || '', service.featured_image || '', service.price || '',
-      service.features || '', service.published ? 1 : 0
+      service.features || '', service.published || false
     );
   },
   
-  update: (id: number, service: Partial<Service>) => {
-    const fields = Object.keys(service).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    const values = Object.values(service).filter((_, i) => Object.keys(service)[i] !== 'id');
-    const stmt = db.prepare(`UPDATE services SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`);
-    return stmt.run(...values, id);
+  update: async (id: number, service: Partial<Service>) => {
+    const fields = Object.keys(service).filter(k => k !== 'id');
+    const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    const values = fields.map(field => service[field as keyof Service]);
+    const stmt = db.prepare(`UPDATE services SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`);
+    return await stmt.run(...values, id);
   },
   
-  delete: (id: number) => {
-    return db.prepare('DELETE FROM services WHERE id = ?').run(id);
+  delete: async (id: number) => {
+    return await db.prepare('DELETE FROM services WHERE id = $1').run(id);
   },
 };
 
 // Team Members
 export const teamMembers = {
-  getAll: (published = false) => {
+  getAll: async (published = false) => {
     const query = published 
-      ? 'SELECT * FROM team_members WHERE published = 1 ORDER BY order_index ASC'
+      ? 'SELECT * FROM team_members WHERE published = true ORDER BY order_index ASC'
       : 'SELECT * FROM team_members ORDER BY order_index ASC';
-    return db.prepare(query).all();
+    return await db.prepare(query).all();
   },
   
-  create: (member: Omit<TeamMember, 'id'>) => {
+  create: async (member: Omit<TeamMember, 'id'>) => {
     const stmt = db.prepare(`
       INSERT INTO team_members (name, position, bio, image, email, linkedin, twitter, order_index, published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
     `);
-    return stmt.run(
+    return await stmt.run(
       member.name, member.position || '', member.bio || '', member.image || '',
       member.email || '', member.linkedin || '', member.twitter || '',
-      member.order_index || 0, member.published ? 1 : 0
+      member.order_index || 0, member.published || false
     );
   },
   
-  update: (id: number, member: Partial<TeamMember>) => {
-    const fields = Object.keys(member).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    const values = Object.values(member).filter((_, i) => Object.keys(member)[i] !== 'id');
-    const stmt = db.prepare(`UPDATE team_members SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`);
-    return stmt.run(...values, id);
+  update: async (id: number, member: Partial<TeamMember>) => {
+    const fields = Object.keys(member).filter(k => k !== 'id');
+    const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    const values = fields.map(field => member[field as keyof TeamMember]);
+    const stmt = db.prepare(`UPDATE team_members SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`);
+    return await stmt.run(...values, id);
   },
   
-  delete: (id: number) => {
-    return db.prepare('DELETE FROM team_members WHERE id = ?').run(id);
+  delete: async (id: number) => {
+    return await db.prepare('DELETE FROM team_members WHERE id = $1').run(id);
   },
 };
 
 // Job Postings
 export const jobPostings = {
-  getAll: (published = false) => {
+  getAll: async (published = false) => {
     const query = published
-      ? 'SELECT * FROM job_postings WHERE published = 1 ORDER BY created_at DESC'
+      ? 'SELECT * FROM job_postings WHERE published = true ORDER BY created_at DESC'
       : 'SELECT * FROM job_postings ORDER BY created_at DESC';
-    return db.prepare(query).all();
+    return await db.prepare(query).all();
   },
 
-  getBySlug: (slug: string) => {
-    return db.prepare('SELECT * FROM job_postings WHERE slug = ?').get(slug);
+  getBySlug: async (slug: string) => {
+    return await db.prepare('SELECT * FROM job_postings WHERE slug = $1').get(slug);
   },
 
-  create: (job: Omit<JobPosting, 'id'>) => {
+  create: async (job: Omit<JobPosting, 'id'>) => {
     const stmt = db.prepare(`
       INSERT INTO job_postings (title, slug, location, employment_type, categories, description, requirements, skills, salary_range, apply_url, remote, published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
     `);
-    return stmt.run(
+    return await stmt.run(
       job.title,
       job.slug,
       job.location || '',
@@ -137,62 +146,60 @@ export const jobPostings = {
       job.skills || '',
       job.salary_range || '',
       job.apply_url || '',
-      job.remote ? 1 : 0,
-      job.published ? 1 : 0
+      job.remote || false,
+      job.published || false
     );
   },
 
-  update: (id: number, job: Partial<JobPosting>) => {
-    const fields = Object.keys(job)
-      .filter((k) => k !== 'id')
-      .map((k) => `${k} = ?`)
-      .join(', ');
-    const values = Object.values(job).filter(
-      (_, i) => Object.keys(job)[i] !== 'id'
-    );
+  update: async (id: number, job: Partial<JobPosting>) => {
+    const fields = Object.keys(job).filter((k) => k !== 'id');
+    const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    const values = fields.map(field => job[field as keyof JobPosting]);
     const stmt = db.prepare(
-      `UPDATE job_postings SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+      `UPDATE job_postings SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`
     );
-    return stmt.run(...values, id);
+    return await stmt.run(...values, id);
   },
 
-  delete: (id: number) => {
-    return db.prepare('DELETE FROM job_postings WHERE id = ?').run(id);
+  delete: async (id: number) => {
+    return await db.prepare('DELETE FROM job_postings WHERE id = $1').run(id);
   },
 };
 
 // Pages
 export const pages = {
-  getAll: (published = false) => {
+  getAll: async (published = false) => {
     const query = published 
-      ? 'SELECT * FROM pages WHERE published = 1'
+      ? 'SELECT * FROM pages WHERE published = true'
       : 'SELECT * FROM pages ORDER BY created_at DESC';
-    return db.prepare(query).all();
+    return await db.prepare(query).all();
   },
   
-  getBySlug: (slug: string) => {
-    return db.prepare('SELECT * FROM pages WHERE slug = ?').get(slug);
+  getBySlug: async (slug: string) => {
+    return await db.prepare('SELECT * FROM pages WHERE slug = $1').get(slug);
   },
   
-  create: (page: Omit<Page, 'id'>) => {
+  create: async (page: Omit<Page, 'id'>) => {
     const stmt = db.prepare(`
       INSERT INTO pages (slug, title, content, meta_description, published)
-      VALUES (?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
     `);
-    return stmt.run(
-      page.slug, page.title, page.content || '', page.meta_description || '', page.published ? 1 : 0
+    return await stmt.run(
+      page.slug, page.title, page.content || '', page.meta_description || '', page.published || false
     );
   },
   
-  update: (id: number, page: Partial<Page>) => {
-    const fields = Object.keys(page).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    const values = Object.values(page).filter((_, i) => Object.keys(page)[i] !== 'id');
-    const stmt = db.prepare(`UPDATE pages SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`);
-    return stmt.run(...values, id);
+  update: async (id: number, page: Partial<Page>) => {
+    const fields = Object.keys(page).filter(k => k !== 'id');
+    const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    const values = fields.map(field => page[field as keyof Page]);
+    const stmt = db.prepare(`UPDATE pages SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`);
+    return await stmt.run(...values, id);
   },
   
-  delete: (id: number) => {
-    return db.prepare('DELETE FROM pages WHERE id = ?').run(id);
+  delete: async (id: number) => {
+    return await db.prepare('DELETE FROM pages WHERE id = $1').run(id);
   },
 };
 

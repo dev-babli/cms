@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const versions = versioning.getVersions('blog_post', id);
+    const versions = await versioning.getVersions('blog_post', id);
     
     return NextResponse.json({ success: true, data: versions });
   } catch (error) {
@@ -25,7 +25,7 @@ export async function POST(
     const id = parseInt(paramId);
     const body = await request.json();
     
-    const result = versioning.saveVersion(
+    const result = await versioning.saveVersion(
       'blog_post',
       id,
       body.content,

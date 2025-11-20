@@ -27,7 +27,7 @@ export async function PUT(
       );
     }
 
-    const session = sessions.findByToken(token);
+    const session = await sessions.findByToken(token);
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -47,7 +47,7 @@ export async function PUT(
     const validated = UpdateUserSchema.parse(body);
 
     // Check if user exists
-    const existingUser = users.findById(userId);
+    const existingUser = await users.findById(userId);
     if (!existingUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -57,7 +57,7 @@ export async function PUT(
 
     // Check if email is being changed and if it already exists
     if (validated.email && validated.email !== existingUser.email) {
-      const emailExists = users.findByEmail(validated.email);
+      const emailExists = await users.findByEmail(validated.email);
       if (emailExists) {
         return NextResponse.json(
           { success: false, error: 'Email already exists' },
@@ -66,7 +66,7 @@ export async function PUT(
       }
     }
 
-    const updatedUser = users.update(userId, validated);
+    const updatedUser = await users.update(userId, validated);
     return NextResponse.json({ success: true, data: updatedUser });
   } catch (error) {
     console.error('Update user error:', error);
@@ -106,7 +106,7 @@ export async function DELETE(
       );
     }
 
-    const session = sessions.findByToken(token);
+    const session = await sessions.findByToken(token);
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -131,7 +131,7 @@ export async function DELETE(
     }
 
     // Check if user exists
-    const existingUser = users.findById(userId);
+    const existingUser = await users.findById(userId);
     if (!existingUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -139,10 +139,10 @@ export async function DELETE(
       );
     }
 
-    const deleted = users.delete(userId);
+    const deleted = await users.delete(userId);
     if (deleted) {
       // Also delete all sessions for this user
-      sessions.deleteAllForUser(userId);
+      await sessions.deleteAllForUser(userId);
       return NextResponse.json({ success: true, message: 'User deleted successfully' });
     } else {
       return NextResponse.json(

@@ -10,22 +10,22 @@ export const resolvers = {
       const token = context.req.cookies.get('auth-token')?.value;
       if (!token) return null;
       
-      const session = sessions.findByToken(token);
+      const session = await sessions.findByToken(token);
       return session ? session.user : null;
     },
 
     user: async (_: any, { id }: { id: number }) => {
-      return users.findById(id);
+      return await users.findById(id);
     },
 
     users: async (_: any, { limit = 50, offset = 0 }: { limit?: number; offset?: number }) => {
-      const allUsers = users.list();
+      const allUsers = await users.list();
       return allUsers.slice(offset, offset + limit);
     },
 
     // Blog post queries
     blogPost: async (_: any, { slug }: { slug: string }) => {
-      return blogPosts.getBySlug(slug);
+      return await blogPosts.getBySlug(slug);
     },
 
     blogPosts: async (
@@ -50,7 +50,7 @@ export const resolvers = {
         sortOrder?: string;
       }
     ) => {
-      let posts = blogPosts.getAll(published);
+      let posts = await blogPosts.getAll(published);
 
       // Filter by category
       if (categoryId) {
@@ -104,7 +104,7 @@ export const resolvers = {
         search?: string;
       }
     ) => {
-      let posts = blogPosts.getAll(published);
+      let posts = await blogPosts.getAll(published);
 
       // Apply filters (same as blogPosts query)
       if (categoryId) {
@@ -155,11 +155,11 @@ export const resolvers = {
 
     // Service queries
     service: async (_: any, { slug }: { slug: string }) => {
-      return services.getBySlug(slug);
+      return await services.getBySlug(slug);
     },
 
     services: async (_: any, { published }: { published?: boolean }) => {
-      return services.getAll(published);
+      return await services.getAll(published);
     },
 
     // Media queries (placeholder)
@@ -203,7 +203,7 @@ export const resolvers = {
   Mutation: {
     // Auth mutations
     login: async (_: any, { email, password }: { email: string; password: string }) => {
-      const userWithPassword = users.findByEmailWithPassword(email);
+      const userWithPassword = await users.findByEmailWithPassword(email);
       if (!userWithPassword) {
         return { success: false, error: 'Invalid credentials' };
       }
@@ -213,9 +213,9 @@ export const resolvers = {
         return { success: false, error: 'Invalid credentials' };
       }
 
-      const token = sessions.create(userWithPassword.id!);
+      const token = await sessions.create(userWithPassword.id!);
       const { password_hash, ...user } = userWithPassword;
-      return { success: true, token, user };
+      return { success: true, token: token.token, user };
     },
 
     register: async (
@@ -224,8 +224,8 @@ export const resolvers = {
     ) => {
       try {
         const user = await users.create({ email, password, name, role: 'author' });
-        const token = sessions.create(user.id!);
-        return { success: true, token, user };
+        const session = await sessions.create(user.id!);
+        return { success: true, token: session.token, user };
       } catch (error) {
         return { success: false, error: 'Registration failed' };
       }
@@ -234,7 +234,7 @@ export const resolvers = {
     logout: async (_: any, __: any, context: any) => {
       const token = context.req.cookies.get('auth-token')?.value;
       if (token) {
-        sessions.delete(token);
+        await sessions.delete(token);
       }
       return true;
     },
@@ -244,20 +244,21 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      const result = blogPosts.create({
+      const result = await blogPosts.create({
         ...input,
         author: session.name,
         publish_date: input.publishDate || new Date().toISOString(),
       });
 
-      return { id: Number(result.lastInsertRowid), ...input, author: session.name };
+      const newId = (result as any).row?.id || (result as any).lastInsertRowid || null;
+      return { id: Number(newId), ...input, author: session.name };
     },
 
     updateBlogPost: async (_: any, { id, input }: { id: number; input: any }, context: any) => {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      blogPosts.update(id, input);
+      await blogPosts.update(id, input);
       return { id, ...input };
     },
 
@@ -265,7 +266,7 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      blogPosts.delete(id);
+      await blogPosts.delete(id);
       return true;
     },
 
@@ -274,7 +275,7 @@ export const resolvers = {
       if (!session) throw new Error('Unauthorized');
 
       const publishDate = new Date().toISOString();
-      blogPosts.update(id, { published: true, publish_date: publishDate });
+      await blogPosts.update(id, { published: true, publish_date: publishDate });
       return { id, published: true, publish_date: publishDate };
     },
 
@@ -282,7 +283,7 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      blogPosts.update(id, { published: false });
+      await blogPosts.update(id, { published: false });
       return { id, published: false };
     },
 
@@ -304,15 +305,16 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      const result = services.create(input);
-      return { id: Number(result.lastInsertRowid), ...input };
+      const result = await services.create(input);
+      const newId = (result as any).row?.id || (result as any).lastInsertRowid || null;
+      return { id: Number(newId), ...input };
     },
 
     updateService: async (_: any, { id, input }: { id: number; input: any }, context: any) => {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      services.update(id, input);
+      await services.update(id, input);
       return { id, ...input };
     },
 
@@ -320,7 +322,7 @@ export const resolvers = {
       const session = await resolvers.Query.me(null, null, context);
       if (!session) throw new Error('Unauthorized');
 
-      services.delete(id);
+      await services.delete(id);
       return true;
     },
 
@@ -405,7 +407,7 @@ export const resolvers = {
   BlogPost: {
     author: async (parent: any) => {
       if (parent.author_id) {
-        return users.findById(parent.author_id);
+        return await users.findById(parent.author_id);
       }
       return null;
     },
@@ -429,18 +431,19 @@ export const resolvers = {
 
   Category: {
     posts: async (parent: any) => {
-      return blogPosts.getAll(true).filter((post: any) => post.category_id === parent.id);
+      return (await blogPosts.getAll(true)).filter((post: any) => post.category_id === parent.id);
     },
 
     postCount: async (parent: any) => {
-      return blogPosts.getAll(true).filter((post: any) => post.category_id === parent.id).length;
+      const posts = await blogPosts.getAll(true);
+      return posts.filter((post: any) => post.category_id === parent.id).length;
     },
   },
 
   MediaFile: {
     uploadedBy: async (parent: any) => {
       if (parent.uploaded_by_id) {
-        return users.findById(parent.uploaded_by_id);
+        return await users.findById(parent.uploaded_by_id);
       }
       return null;
     },
@@ -448,14 +451,14 @@ export const resolvers = {
 
   ContentVersion: {
     createdBy: async (parent: any) => {
-      return users.findById(parent.created_by_id);
+      return await users.findById(parent.created_by_id);
     },
   },
 
   ActivityEvent: {
     user: async (parent: any) => {
       if (parent.user_id) {
-        return users.findById(parent.user_id);
+        return await users.findById(parent.user_id);
       }
       return null;
     },

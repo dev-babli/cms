@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const { email, password, name, role = 'author' } = RegisterSchema.parse(body);
 
     // Check if user already exists
-    const existingUser = users.findByEmail(email);
+    const existingUser = await users.findByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: 'User with this email already exists' },
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create session
-    const session = sessions.create(newUser.id);
+    const session = await sessions.create(newUser.id);
 
     // Set cookie
     const response = NextResponse.json({

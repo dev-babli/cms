@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
     
-    const data = teamMembers.getAll(published);
+    const data = await teamMembers.getAll(published);
     return NextResponse.json(
       { success: true, data },
       {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = TeamMemberSchema.parse(body);
     
-    const result = teamMembers.create(validated);
+    const result = await teamMembers.create(validated);
     return NextResponse.json(
       { success: true, data: result },
       {

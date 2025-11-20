@@ -7,20 +7,26 @@ import { redirect } from 'next/navigation';
  * Returns null if not authenticated
  */
 export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth-token')?.value;
-  
-  if (!token) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return null;
+    }
+    
+    const session = await sessions.findByToken(token);
+    
+    if (!session) {
+      return null;
+    }
+    
+    return session.user;
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error);
+    // Return null on error to prevent 500 - user will be redirected to login
     return null;
   }
-  
-  const session = sessions.findByToken(token);
-  
-  if (!session) {
-    return null;
-  }
-  
-  return session.user;
 }
 
 /**

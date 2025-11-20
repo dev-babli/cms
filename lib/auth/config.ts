@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = db
+        const user = await db
           .prepare("SELECT * FROM users WHERE email = ?")
           .get(credentials.email) as any;
 

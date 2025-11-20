@@ -23,7 +23,7 @@ export async function GET(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const post = blogPosts.getBySlug(paramId);
+    const post = await blogPosts.getBySlug(paramId);
     
     if (!post) {
       return NextResponse.json(
@@ -60,7 +60,7 @@ export async function PUT(
     const body = await request.json();
     const validated = BlogPostSchema.partial().parse(body);
     
-    const result = blogPosts.update(id, validated);
+    const result = await blogPosts.update(id, validated);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }
@@ -83,7 +83,7 @@ export async function DELETE(
   try {
     const { id: paramId } = await params;
     const id = parseInt(paramId);
-    const result = blogPosts.delete(id);
+    const result = await blogPosts.delete(id);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }

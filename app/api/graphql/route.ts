@@ -74,33 +74,34 @@ const typeDefs = `
 
 const resolvers = {
   Query: {
-    blogPosts: (_: any, { published }: { published?: boolean }) => {
-      return blogPosts.getAll(published);
+    blogPosts: async (_: any, { published }: { published?: boolean }) => {
+      return await blogPosts.getAll(published);
     },
-    blogPost: (_: any, { slug }: { slug: string }) => {
-      return blogPosts.getBySlug(slug);
+    blogPost: async (_: any, { slug }: { slug: string }) => {
+      return await blogPosts.getBySlug(slug);
     },
-    services: (_: any, { published }: { published?: boolean }) => {
-      return services.getAll(published);
+    services: async (_: any, { published }: { published?: boolean }) => {
+      return await services.getAll(published);
     },
-    service: (_: any, { slug }: { slug: string }) => {
-      return services.getBySlug(slug);
+    service: async (_: any, { slug }: { slug: string }) => {
+      return await services.getBySlug(slug);
     },
-    teamMembers: (_: any, { published }: { published?: boolean }) => {
-      return teamMembers.getAll(published);
+    teamMembers: async (_: any, { published }: { published?: boolean }) => {
+      return await teamMembers.getAll(published);
     },
   },
   Mutation: {
-    createBlogPost: (_: any, { input }: { input: any }) => {
-      const result = blogPosts.create(input);
-      return { id: Number(result.lastInsertRowid), ...input };
+    createBlogPost: async (_: any, { input }: { input: any }) => {
+      const result = await blogPosts.create(input);
+      const newId = (result as any).row?.id || (result as any).lastInsertRowid || null;
+      return { id: Number(newId), ...input };
     },
-    updateBlogPost: (_: any, { id, input }: { id: number; input: any }) => {
-      blogPosts.update(id, input);
+    updateBlogPost: async (_: any, { id, input }: { id: number; input: any }) => {
+      await blogPosts.update(id, input);
       return { id, ...input };
     },
-    deleteBlogPost: (_: any, { id }: { id: number }) => {
-      blogPosts.delete(id);
+    deleteBlogPost: async (_: any, { id }: { id: number }) => {
+      await blogPosts.delete(id);
       return true;
     },
   },

@@ -49,26 +49,30 @@ export const users = {
     // Insert user
     const stmt = db.prepare(`
       INSERT INTO users (email, password_hash, name, role, status, email_verified)
-      VALUES (?, ?, ?, ?, 'active', 0)
+      VALUES (?, ?, ?, ?, 'active', false)
+      RETURNING *
     `);
     
-    const result = stmt.run(email, password_hash, name, role);
+    const result = await stmt.run(email, password_hash, name, role);
     
-    // Return created user (without password)
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as User;
-    return user;
+    // Return created user from result
+    if (result.lastInsertRowid) {
+      const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as User;
+      return user;
+    }
+    throw new Error('Failed to create user');
   },
 
   // Get user by email
-  findByEmail: (email: string): User | null => {
+  findByEmail: async (email: string): Promise<User | null> => {
     const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    return stmt.get(email) as User | null;
+    return await stmt.get(email) as User | null;
   },
 
   // Get user by ID
-  findById: (id: number): User | null => {
+  findById: async (id: number): Promise<User | null> => {
     const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
-    return stmt.get(id) as User | null;
+    return await stmt.get(id) as User | null;
   },
 
   // Verify password
@@ -77,13 +81,13 @@ export const users = {
   },
 
   // Get user with password for authentication
-  findByEmailWithPassword: (email: string): (User & { password_hash: string }) | null => {
+  findByEmailWithPassword: async (email: string): Promise<(User & { password_hash: string }) | null> => {
     const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    return stmt.get(email) as (User & { password_hash: string }) | null;
+    return await stmt.get(email) as (User & { password_hash: string }) | null;
   },
 
   // Update user
-  update: (id: number, updates: Partial<User>): User => {
+  update: async (id: number, updates: Partial<User>): Promise<User> => {
     const fields = Object.keys(updates).filter(k => k !== 'id' && k !== 'password_hash');
     const values = fields.map(field => updates[field as keyof User]);
     
@@ -93,43 +97,46 @@ export const users = {
         UPDATE users 
         SET ${setClause}, updated_at = CURRENT_TIMESTAMP 
         WHERE id = ?
+        RETURNING *
       `);
-      stmt.run(...values, id);
+      await stmt.run(...values, id);
     }
     
-    return users.findById(id)!;
+    const user = await users.findById(id);
+    if (!user) throw new Error('User not found');
+    return user;
   },
 
   // Update last login
-  updateLastLogin: (id: number): void => {
+  updateLastLogin: async (id: number): Promise<void> => {
     const stmt = db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?');
-    stmt.run(id);
+    await stmt.run(id);
   },
 
   // Delete user
-  delete: (id: number): boolean => {
+  delete: async (id: number): Promise<boolean> => {
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
-    const result = stmt.run(id);
+    const result = await stmt.run(id);
     return result.changes > 0;
   },
 
   // List all users
-  list: (): User[] => {
+  list: async (): Promise<User[]> => {
     const stmt = db.prepare('SELECT * FROM users ORDER BY created_at DESC');
-    return stmt.all() as User[];
+    return await stmt.all() as User[];
   },
 
   // Get users by role
-  findByRole: (role: string): User[] => {
+  findByRole: async (role: string): Promise<User[]> => {
     const stmt = db.prepare('SELECT * FROM users WHERE role = ? ORDER BY created_at DESC');
-    return stmt.all(role) as User[];
+    return await stmt.all(role) as User[];
   },
 };
 
 // Session management
 export const sessions = {
   // Create session
-  create: (userId: number): Session => {
+  create: async (userId: number): Promise<Session> => {
     const token = nanoid(32);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
@@ -137,9 +144,10 @@ export const sessions = {
     const stmt = db.prepare(`
       INSERT INTO user_sessions (user_id, token, expires_at)
       VALUES (?, ?, ?)
+      RETURNING *
     `);
     
-    const result = stmt.run(userId, token, expiresAt.toISOString());
+    const result = await stmt.run(userId, token, expiresAt.toISOString());
     
     return {
       id: Number(result.lastInsertRowid),
@@ -151,15 +159,15 @@ export const sessions = {
   },
 
   // Find session by token
-  findByToken: (token: string): (Session & { user: User }) | null => {
+  findByToken: async (token: string): Promise<(Session & { user: User }) | null> => {
     const stmt = db.prepare(`
       SELECT s.*, u.* 
       FROM user_sessions s
       JOIN users u ON s.user_id = u.id
-      WHERE s.token = ? AND s.expires_at > datetime('now')
+      WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP
     `);
     
-    const result = stmt.get(token) as any;
+    const result = await stmt.get(token) as any;
     if (!result) return null;
     
     const { user_id, token: sessionToken, expires_at, created_at, ...userData } = result;
@@ -175,30 +183,30 @@ export const sessions = {
   },
 
   // Delete session
-  delete: (token: string): boolean => {
+  delete: async (token: string): Promise<boolean> => {
     const stmt = db.prepare('DELETE FROM user_sessions WHERE token = ?');
-    const result = stmt.run(token);
+    const result = await stmt.run(token);
     return result.changes > 0;
   },
 
   // Delete all sessions for user
-  deleteAllForUser: (userId: number): boolean => {
+  deleteAllForUser: async (userId: number): Promise<boolean> => {
     const stmt = db.prepare('DELETE FROM user_sessions WHERE user_id = ?');
-    const result = stmt.run(userId);
+    const result = await stmt.run(userId);
     return result.changes > 0;
   },
 
   // Clean expired sessions
-  cleanExpired: (): number => {
-    const stmt = db.prepare("DELETE FROM user_sessions WHERE expires_at <= datetime('now')");
-    const result = stmt.run();
+  cleanExpired: async (): Promise<number> => {
+    const stmt = db.prepare("DELETE FROM user_sessions WHERE expires_at <= CURRENT_TIMESTAMP");
+    const result = await stmt.run();
     return result.changes;
   },
 };
 
 // Initialize default admin user
 export const initializeDefaultAdmin = async (): Promise<void> => {
-  const adminExists = users.findByEmail('admin@emscale.com');
+  const adminExists = await users.findByEmail('admin@emscale.com');
   
   if (!adminExists) {
     await users.create({

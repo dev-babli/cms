@@ -84,20 +84,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_relationships ON content_relationships(from_type, from_id, to_type, to_id);
 `);
 
-// Create default admin user if none exists
-const adminExists = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get() as { count: number };
-
-if (adminExists.count === 0) {
-  const bcrypt = require('bcryptjs');
-  const hashedPassword = bcrypt.hashSync('admin123', 10);
-  
-  db.prepare(`
-    INSERT INTO users (email, password, name, role)
-    VALUES (?, ?, ?, ?)
-  `).run('admin@emscale.com', hashedPassword, 'Admin User', 'admin');
-  
-  console.log('✅ Default admin user created: admin@emscale.com / admin123');
-}
+// Note: Default admin user creation is handled in lib/auth/users.ts (initializeDefaultAdmin)
+// This file is for extended schema only
 
 export default db;
 

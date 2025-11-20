@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = sessions.findByToken(token);
+    const session = await sessions.findByToken(token);
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const allUsers = users.list();
+    const allUsers = await users.list();
     return NextResponse.json({ success: true, data: allUsers });
   } catch (error) {
     console.error('Get users error:', error);
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = sessions.findByToken(token);
+    const session = await sessions.findByToken(token);
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const validated = CreateUserSchema.parse(body);
 
     // Check if user already exists
-    const existingUser = users.findByEmail(validated.email);
+    const existingUser = await users.findByEmail(validated.email);
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: 'User with this email already exists' },

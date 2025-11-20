@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
 
-    const data = jobPostings.getAll(published);
+    const data = await jobPostings.getAll(published);
     return NextResponse.json({ success: true, data }, { headers: corsHeaders });
   } catch (error) {
     return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = JobPostingSchema.parse(body);
 
-    const result = jobPostings.create(validated);
+    const result = await jobPostings.create(validated);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }

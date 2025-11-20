@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
     
-    const posts = blogPosts.getAll(published);
+    const posts = await blogPosts.getAll(published);
     
     // Enable CORS for React app
     return NextResponse.json(
@@ -69,24 +69,22 @@ export async function POST(request: NextRequest) {
       validated.publish_date = new Date().toISOString();
     }
     
-    const result = blogPosts.create(validated);
+    const result = await blogPosts.create(validated);
     console.log('Blog post created successfully:', result);
+    
+    // Get the ID from the result (PostgreSQL returns the inserted row with RETURNING *)
+    const newId = (result as any).row?.id || (result as any).lastInsertRowid || (result as any).id || null;
+    const createdPost = (result as any).row || { id: newId, ...validated };
     
     // Trigger real-time updates
     if (typeof global !== 'undefined' && (global as any).io) {
-      (global as any).io.emit('blog:created', {
-        id: result.lastInsertRowid,
-        ...validated,
-      });
+      (global as any).io.emit('blog:created', createdPost);
     }
     
     return NextResponse.json(
       { 
         success: true, 
-        data: {
-          id: result.lastInsertRowid,
-          ...validated,
-        }
+        data: createdPost
       },
       {
         headers: {
