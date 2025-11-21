@@ -88,13 +88,29 @@ export default function MediaPage() {
                 body: formData,
             });
 
+            if (!res.ok) {
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await res.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                alert(`Upload failed: ${errorMessage}`);
+                return;
+            }
+
             const data = await res.json();
 
-            if (data.success) {
+            if (data.success && data.data) {
                 setMedia(prev => [...data.data, ...prev]);
+            } else {
+                alert(`Upload failed: ${data.error || 'Unknown error'}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload failed:", error);
+            const errorMessage = error?.message || 'Network error. Please check your connection.';
+            alert(`Upload error: ${errorMessage}`);
         } finally {
             setUploading(false);
         }

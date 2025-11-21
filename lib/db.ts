@@ -5,19 +5,42 @@ if (!process.env.DATABASE_URL) {
   console.warn('⚠️ DATABASE_URL environment variable is not set');
 }
 
+// Helper to parse and validate connection string
+function getConnectionConfig() {
+  const connectionString = process.env.DATABASE_URL || '';
+  
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not set');
+  }
+
+  // Log connection info (without password) for debugging
+  try {
+    const url = new URL(connectionString);
+    const maskedUrl = `${url.protocol}//${url.username}:****@${url.hostname}${url.pathname}`;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔗 Database connection:', maskedUrl);
+    }
+  } catch (e) {
+    // Invalid URL format
+    console.error('❌ Invalid DATABASE_URL format');
+  }
+
+  return {
+    connectionString,
+    ssl: connectionString.includes('supabase') 
+      ? { rejectUnauthorized: false } 
+      : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+  };
+}
+
 // Create connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('supabase') 
-    ? { rejectUnauthorized: false } 
-    : false,
-  max: 10, // Reduced for Supabase connection limits
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000, // Increased timeout for Supabase
-  // Supabase connection pooler settings
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-});
+const poolConfig = getConnectionConfig();
+const pool = new Pool(poolConfig);
 
 // Test connection
 pool.on('connect', (client) => {
@@ -62,6 +85,15 @@ export const query = async (text: string, params?: any[], retries = 2): Promise<
         // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
         continue;
+      }
+      
+      // Enhanced error logging for authentication issues
+      if (error.message?.includes('password authentication failed')) {
+        console.error('❌ Database Authentication Failed!');
+        console.error('   Error:', error.message);
+        console.error('   💡 Check DATABASE_URL in Vercel environment variables');
+        console.error('   💡 Verify password is correct: soumeet2006');
+        console.error('   💡 Connection string format: postgresql://postgres.xxx:password@host:port/db');
       }
       
       // Log and throw the error

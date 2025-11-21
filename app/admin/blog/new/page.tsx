@@ -107,14 +107,26 @@ export default function NewBlogPost() {
 
             if (res.ok) {
                 const data = await res.json();
-                setFormData(prev => ({ ...prev, featured_image: data.data.url }));
+                if (data.success && data.data) {
+                    setFormData(prev => ({ ...prev, featured_image: data.data.url }));
+                } else {
+                    alert(`Upload failed: ${data.error || 'Unknown error'}`);
+                }
             } else {
-                const data = await res.json();
-                alert(`Upload failed: ${data.error || 'Unknown error'}`);
+                // Try to get error message from response
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await res.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                alert(`Upload failed: ${errorMessage}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Upload error:', error);
-            alert(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error?.message || 'Network error. Please check your connection.';
+            alert(`Upload error: ${errorMessage}`);
         } finally {
             setUploadingImage(false);
         }

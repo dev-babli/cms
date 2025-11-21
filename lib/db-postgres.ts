@@ -5,10 +5,52 @@ if (!process.env.DATABASE_URL) {
   console.warn('⚠️ DATABASE_URL environment variable is not set');
 }
 
+// Helper function to automatically encode password in connection string
+function encodeConnectionString(connectionString: string): string {
+  if (!connectionString) return connectionString;
+  
+  // Parse the connection string
+  try {
+    const url = new URL(connectionString);
+    
+    // If password exists and contains special characters, encode it
+    if (url.password) {
+      // Check if password needs encoding (contains unencoded special chars)
+      const decodedPassword = decodeURIComponent(url.password);
+      if (decodedPassword !== url.password || /[@#%&+=\/?]/.test(url.password)) {
+        // Password might need encoding - encode it properly
+        const encodedPassword = encodeURIComponent(decodedPassword);
+        url.password = encodedPassword;
+        return url.toString();
+      }
+    }
+    
+    return connectionString;
+  } catch (e) {
+    // If URL parsing fails, try manual encoding of common patterns
+    // Pattern: postgresql://user:password@host:port/db
+    const match = connectionString.match(/^postgresql:\/\/([^:]+):([^@]+)@(.+)$/);
+    if (match) {
+      const [, user, password, rest] = match;
+      // Check if password needs encoding
+      if (/[@#%&+=\/?]/.test(password) && !password.includes('%')) {
+        const encodedPassword = encodeURIComponent(password);
+        return `postgresql://${user}:${encodedPassword}@${rest}`;
+      }
+    }
+    
+    return connectionString;
+  }
+}
+
+// Get and encode connection string
+const rawConnectionString = process.env.DATABASE_URL || '';
+const encodedConnectionString = encodeConnectionString(rawConnectionString);
+
 // Create connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('supabase') 
+  connectionString: encodedConnectionString,
+  ssl: encodedConnectionString.includes('supabase') 
     ? { rejectUnauthorized: false } 
     : false,
   max: 10, // Reduced for Supabase connection limits

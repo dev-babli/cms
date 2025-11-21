@@ -39,12 +39,26 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
 
             if (res.ok) {
                 const data = await res.json();
-                onUpload(data.data.url);
+                if (data.success && data.data) {
+                    onUpload(data.data.url);
+                } else {
+                    alert(`Upload failed: ${data.error || 'Unknown error'}`);
+                }
             } else {
-                alert("Upload failed");
+                // Try to get error message from response
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await res.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch {
+                    errorMessage = res.statusText || errorMessage;
+                }
+                alert(`Upload failed: ${errorMessage}`);
             }
-        } catch (error) {
-            alert("Error uploading file");
+        } catch (error: any) {
+            console.error('Upload error:', error);
+            const errorMessage = error?.message || 'Network error. Please check your connection.';
+            alert(`Error uploading file: ${errorMessage}`);
         } finally {
             setUploading(false);
         }

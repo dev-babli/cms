@@ -35,15 +35,31 @@ export function ImageUpload({ onUpload, currentUrl }: ImageUploadProps) {
                 body: formData,
             });
 
-            const data = await res.json();
-            if (data.success) {
-                onUpload(data.url);
-            } else {
-                alert('Upload failed');
+            // Check if response is OK before parsing JSON
+            if (!res.ok) {
+                // Try to get error message from response
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await res.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch {
+                    // If response is not JSON, use status text
+                    errorMessage = res.statusText || errorMessage;
+                }
+                alert(`Upload failed: ${errorMessage}`);
+                return;
             }
-        } catch (error) {
+
+            const data = await res.json();
+            if (data.success && data.data) {
+                onUpload(data.data.url);
+            } else {
+                alert(`Upload failed: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error: any) {
             console.error('Upload error:', error);
-            alert('Upload failed');
+            const errorMessage = error?.message || 'Network error. Please check your connection.';
+            alert(`Upload error: ${errorMessage}`);
         } finally {
             setUploading(false);
         }
