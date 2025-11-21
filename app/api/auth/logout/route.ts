@@ -1,68 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessions } from '@/lib/auth/users';
+import { createServerClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value;
+    const supabase = createServerClient();
     
-    if (token) {
-      await sessions.delete(token);
-    }
+    // Sign out from Supabase Auth
+    await supabase.auth.signOut();
 
-    // Check if this is a form submission (redirect) or API call (JSON)
     const contentType = request.headers.get('content-type');
     const isFormSubmit = contentType?.includes('application/x-www-form-urlencoded') || 
                          contentType?.includes('multipart/form-data') ||
-                         !contentType; // Form submissions from HTML forms don't always set content-type
+                         !contentType;
 
-    if (isFormSubmit) {
-      // Redirect to login page
-      const response = NextResponse.redirect(new URL('/auth/login', request.url));
-      
-      // Cookie configuration optimized for Vercel production
-      const isProduction = process.env.NODE_ENV === 'production';
-      
-      response.cookies.set('auth-token', '', {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: 0, // Delete cookie
-        path: '/',
-        // Don't set domain - allows Vercel subdomains to work
-      });
-      
-      // Also clear Supabase session cookie if it exists
-      response.cookies.set('sb-access-token', '', {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: 0,
-        path: '/',
-      });
-
-      return response;
-    }
-
-    // Return JSON for API calls
-    const response = NextResponse.json({
-      success: true,
-      message: 'Logged out successfully',
-    });
-
-    // Cookie configuration optimized for Vercel production
     const isProduction = process.env.NODE_ENV === 'production';
+
+    const response = isFormSubmit 
+      ? NextResponse.redirect(new URL('/auth/login', request.url))
+      : NextResponse.json({ success: true, message: 'Logged out successfully' });
     
-    response.cookies.set('auth-token', '', {
+    // Clear Supabase cookies
+    response.cookies.set('sb-access-token', '', {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 0, // Delete cookie
+      maxAge: 0,
       path: '/',
-      // Don't set domain - allows Vercel subdomains to work
     });
     
-    // Also clear Supabase session cookie if it exists
-    response.cookies.set('sb-access-token', '', {
+    response.cookies.set('sb-refresh-token', '', {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
@@ -72,41 +38,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    // Log full error in development, generic in production
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Logout error:', error);
-    } else {
-      console.error('Logout error:', error instanceof Error ? error.message : 'Unknown error');
-    }
-    
-    // Even if logout fails, try to clear cookies
-    const response = NextResponse.json(
-      { 
-        success: false, 
-        error: process.env.NODE_ENV === 'development'
-          ? (error instanceof Error ? error.message : 'Logout failed')
-          : 'Logout failed. Cookies cleared.'
-      },
+    console.error('Logout error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Logout failed' },
       { status: 500 }
     );
-    
-    // Clear cookies anyway
-    const isProduction = process.env.NODE_ENV === 'production';
-    response.cookies.set('auth-token', '', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set('sb-access-token', '', {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    
-    return response;
   }
 }

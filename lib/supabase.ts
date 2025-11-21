@@ -16,13 +16,12 @@ export const supabase = createClient(
   }
 );
 
-// Server-side Supabase client (for API routes - uses service role key for security)
+// Server-side Supabase client (for API routes)
 export const createServerClient = () => {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   
-  // Prefer service role key for server-side (more secure)
-  // Falls back to anon key if service role not available
+  // Use service role key for admin operations, anon key for regular auth
   const key = serviceRoleKey || anonKey;
   
   if (!supabaseUrl) {
@@ -48,10 +47,7 @@ export const createServerClient = () => {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
-        // Use admin API if service role key is available
-        ...(serviceRoleKey && {
-          // Service role key bypasses RLS - use with caution!
-        }),
+        detectSessionInUrl: false,
       },
     }
   );
