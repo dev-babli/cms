@@ -30,14 +30,30 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError || !authData.user) {
-      // Provide more specific error messages in development
-      const errorMessage = process.env.NODE_ENV === 'development' && authError
-        ? authError.message
-        : 'Invalid email or password';
+      // Log error for debugging (always log in production for troubleshooting)
+      console.error('Supabase Auth error:', {
+        message: authError?.message,
+        status: authError?.status,
+        email: email,
+        hasUser: !!authData.user,
+      });
       
-      // Log detailed error in development
-      if (process.env.NODE_ENV === 'development' && authError) {
-        console.error('Supabase Auth error:', authError);
+      // Provide more specific error messages
+      let errorMessage = 'Invalid email or password';
+      
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (authError.message.includes('Email not confirmed')) {
+          errorMessage = 'Please confirm your email address to log in.';
+        } else if (authError.message.includes('User not found')) {
+          errorMessage = 'User not found. Please create an account or contact administrator.';
+        } else {
+          // In production, show generic message; in dev, show actual error
+          errorMessage = process.env.NODE_ENV === 'development' 
+            ? authError.message 
+            : 'Invalid email or password';
+        }
       }
       
       return NextResponse.json(

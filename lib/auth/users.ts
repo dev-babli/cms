@@ -207,17 +207,106 @@ export const sessions = {
 
 // Initialize default admin user
 export const initializeDefaultAdmin = async (): Promise<void> => {
-  const adminExists = await users.findByEmail('admin@emscale.com');
-  
-  if (!adminExists) {
-    await users.create({
-      email: 'admin@emscale.com',
-      password: 'admin123',
-      name: 'System Administrator',
-      role: 'admin',
-    });
+  try {
+    const adminExists = await users.findByEmail('admin@emscale.com');
+    
+    if (adminExists) {
+      // Admin exists - ensure it's active
+      if (adminExists.status !== 'active') {
+        await users.update(adminExists.id, { status: 'active' });
+      }
+      
+      // If no Supabase ID, try to create/link Supabase Auth user
+      if (!adminExists.supabase_user_id) {
+        try {
+          const { createServerClient } = await import('../supabase');
+          const supabase = createServerClient();
+          
+          // Check if user exists in Supabase Auth
+          const { data: authUsers } = await supabase.auth.admin.listUsers();
+          const authUser = authUsers?.users?.find((u: any) => u.email === 'admin@emscale.com');
+          
+          if (authUser) {
+            // Link existing Supabase Auth user
+            await users.update(adminExists.id, { supabase_user_id: authUser.id });
+          } else {
+            // Create new Supabase Auth user
+            const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+              email: 'admin@emscale.com',
+              password: 'admin123',
+              email_confirm: true,
+              user_metadata: {
+                name: 'System Administrator',
+                role: 'admin',
+              },
+            });
+            
+            if (!createError && newAuthUser?.user) {
+              await users.update(adminExists.id, { 
+                supabase_user_id: newAuthUser.user.id,
+                status: 'active',
+                email_verified: true,
+              });
+            }
+          }
+        } catch (supabaseError) {
+          // Supabase Auth not available - continue with database-only user
+          console.warn('Could not create Supabase Auth user:', supabaseError);
+        }
+      }
+      return;
+    }
+    
+    // Admin doesn't exist - create in both Supabase Auth and database
+    let supabaseUserId: string | undefined;
+    
+    try {
+      const { createServerClient } = await import('../supabase');
+      const supabase = createServerClient();
+      
+      // Create user in Supabase Auth first
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: 'admin@emscale.com',
+        password: 'admin123',
+        email_confirm: true,
+        user_metadata: {
+          name: 'System Administrator',
+          role: 'admin',
+        },
+      });
+      
+      if (!authError && authData?.user) {
+        supabaseUserId = authData.user.id;
+      }
+    } catch (supabaseError) {
+      // Supabase Auth not available - create database-only user
+      console.warn('Could not create Supabase Auth user:', supabaseError);
+    }
+    
+    // Create user in database
+    const passwordHash = await bcrypt.hash('admin123', 12);
+    const stmt = db.prepare(`
+      INSERT INTO users (email, password_hash, name, role, status, email_verified, supabase_user_id)
+      VALUES (?, ?, ?, ?, 'active', true, ?)
+      RETURNING *
+    `);
+    
+    const result = await stmt.run(
+      'admin@emscale.com',
+      passwordHash,
+      'System Administrator',
+      'admin',
+      supabaseUserId || null
+    );
+    
+    if (!result.lastInsertRowid) {
+      throw new Error('Failed to create admin user');
+    }
     
     console.log('Default admin user created: admin@emscale.com / admin123');
+  } catch (error) {
+    console.error('Error initializing default admin:', error);
+    // Don't throw - allow app to continue
   }
 };
 

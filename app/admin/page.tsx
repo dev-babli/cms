@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FadeIn } from "@/components/ui/scroll-reveal";
 import { requireAuth } from "@/lib/auth/server";
 
+export const dynamic = 'force-dynamic'; // Force dynamic rendering for admin page
+
 export default async function AdminDashboard() {
   // Require authentication - will redirect to login if not authenticated
   const user = await requireAuth();
