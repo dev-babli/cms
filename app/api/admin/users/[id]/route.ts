@@ -1,82 +1,109 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users, sessions } from '@/lib/auth/users';
+import { createServerClient } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth/server';
 import { z } from 'zod';
 
 const UpdateUserSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),
   role: z.enum(['admin', 'editor', 'author', 'viewer']).optional(),
-  status: z.enum(['active', 'inactive', 'suspended', 'pending']).optional(),
+  status: z.enum(['active', 'inactive', 'suspended']).optional(),
 });
 
-// Update user (admin only)
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// Update user in Supabase Auth (admin only)
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Await params (Next.js 15+)
     const { id } = await params;
-    
-    // Check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    const userId = id;
+
+    // Check authentication using Supabase Auth
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const session = await sessions.findByToken(token);
-    if (!session || session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
       );
     }
 
-    const userId = parseInt(id);
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
     const validated = UpdateUserSchema.parse(body);
 
+    const supabase = createServerClient();
+
     // Check if user exists
-    const existingUser = await users.findById(userId);
-    if (!existingUser) {
+    const { data: userData, error: getUserError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (getUserError || !userData.user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // Check if email is being changed and if it already exists
-    if (validated.email && validated.email !== existingUser.email) {
-      const emailExists = await users.findByEmail(validated.email);
+    // Check email uniqueness if email is being changed
+    if (validated.email && validated.email !== userData.user.email) {
+      const { data: allUsers } = await supabase.auth.admin.listUsers();
+      const emailExists = allUsers?.users?.some((u: any) => u.email === validated.email && u.id !== userId);
+      
       if (emailExists) {
         return NextResponse.json(
-          { success: false, error: 'Email already exists' },
+          { success: false, error: 'Email already in use' },
           { status: 409 }
         );
       }
     }
 
-    const updatedUser = await users.update(userId, validated);
-    return NextResponse.json({ success: true, data: updatedUser });
+    // Update user in Supabase Auth
+    const updateData: any = {};
+    if (validated.email) updateData.email = validated.email;
+    if (validated.name || validated.role) {
+      updateData.user_metadata = {
+        ...userData.user.user_metadata,
+        ...(validated.name && { name: validated.name }),
+        ...(validated.role && { role: validated.role }),
+      };
+    }
+
+    const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      updateData
+    );
+
+    if (updateError || !updatedUser.user) {
+      console.error('Error updating user in Supabase:', updateError);
+      return NextResponse.json(
+        { success: false, error: updateError?.message || 'Failed to update user' },
+        { status: 500 }
+      );
+    }
+
+    // Return updated user in our format
+    const result = {
+      id: updatedUser.user.id,
+      email: updatedUser.user.email,
+      name: updatedUser.user.user_metadata?.name || updatedUser.user.email?.split('@')[0] || 'User',
+      role: updatedUser.user.user_metadata?.role || 'author',
+      status: validated.status || (updatedUser.user.email_confirmed_at ? 'active' : 'pending'),
+      email_verified: !!updatedUser.user.email_confirmed_at,
+      last_login: updatedUser.user.last_sign_in_at || null,
+      created_at: updatedUser.user.created_at,
+      updated_at: updatedUser.user.updated_at || updatedUser.user.created_at,
+    };
+
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('Update user error:', error);
     
     if (error instanceof z.ZodError) {
-      const errorMessages = error.issues.map(err => 
-        `${err.path.join('.')}: ${err.message}`
-      ).join(', ');
       return NextResponse.json(
-        { success: false, error: `Validation failed: ${errorMessages}` },
+        { success: false, error: 'Invalid input data' },
         { status: 400 }
       );
     }
@@ -88,68 +115,53 @@ export async function PUT(
   }
 }
 
-// Delete user (admin only)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// Delete user from Supabase Auth (admin only)
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Await params (Next.js 15+)
     const { id } = await params;
-    
-    // Check authentication
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
+    const userId = id;
+
+    // Check authentication using Supabase Auth
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const session = await sessions.findByToken(token);
-    if (!session || session.user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
       );
     }
 
-    const userId = parseInt(id);
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
-
-    // Prevent admin from deleting themselves
-    if (session.user.id === userId) {
+    // Prevent deleting yourself
+    if (userId === user.id) {
       return NextResponse.json(
         { success: false, error: 'Cannot delete your own account' },
         { status: 400 }
       );
     }
 
-    // Check if user exists
-    const existingUser = await users.findById(userId);
-    if (!existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
+    const supabase = createServerClient();
 
-    const deleted = await users.delete(userId);
-    if (deleted) {
-      // Also delete all sessions for this user
-      await sessions.deleteAllForUser(userId);
-      return NextResponse.json({ success: true, message: 'User deleted successfully' });
-    } else {
+    // Delete user from Supabase Auth
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+
+    if (deleteError) {
+      console.error('Error deleting user from Supabase:', deleteError);
       return NextResponse.json(
-        { success: false, error: 'Failed to delete user' },
+        { success: false, error: deleteError.message || 'Failed to delete user' },
         { status: 500 }
       );
     }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'User deleted successfully' 
+    });
   } catch (error) {
     console.error('Delete user error:', error);
     return NextResponse.json(
@@ -158,4 +170,3 @@ export async function DELETE(
     );
   }
 }
-

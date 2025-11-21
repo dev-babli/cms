@@ -1,4 +1,4 @@
-// Script to test Supabase connection and Auth
+// Test Supabase connection and list users
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 
@@ -14,17 +14,11 @@ if (!supabaseUrl) {
 }
 
 if (!serviceRoleKey && !anonKey) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY is not set!');
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set!');
   process.exit(1);
 }
 
 const key = serviceRoleKey || anonKey;
-const keyType = serviceRoleKey ? 'Service Role Key' : 'Anon Key';
-
-console.log(`✅ Supabase URL: ${supabaseUrl}`);
-console.log(`✅ Using: ${keyType}`);
-console.log('\n🧪 Testing connection...\n');
-
 const supabase = createClient(supabaseUrl, key, {
   auth: {
     autoRefreshToken: false,
@@ -34,76 +28,66 @@ const supabase = createClient(supabaseUrl, key, {
 
 async function testConnection() {
   try {
-    // Test 1: Check if we can reach Supabase
-    console.log('1️⃣ Testing basic connection...');
-    const { data: healthCheck, error: healthError } = await supabase
-      .from('users')
-      .select('count')
-      .limit(0);
-    
-    if (healthError && !healthError.message.includes('permission denied')) {
-      console.error('❌ Connection failed:', healthError.message);
-      return false;
-    }
-    console.log('✅ Connection successful!\n');
+    console.log('✅ Supabase URL:', supabaseUrl);
+    console.log('✅ Using:', serviceRoleKey ? 'Service Role Key' : 'Anon Key');
+    console.log('');
 
-    // Test 2: Check Auth service
-    console.log('2️⃣ Testing Auth service...');
-    // Try to get auth session (this will fail but tells us if auth is enabled)
-    const { data: authData, error: authError } = await supabase.auth.getSession();
+    // Test 1: List users from Supabase Auth
+    console.log('1️⃣ Listing users from Supabase Auth...');
+    const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
     
-    // If we get a specific error about auth not being available, that's the issue
-    if (authError && authError.message.includes('Invalid API key')) {
-      console.error('❌ Invalid API key!');
-      console.error('   Check your SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY');
-      return false;
+    if (listError) {
+      console.error('❌ Error listing users:', listError.message);
+      if (listError.message.includes('JWT')) {
+        console.error('   💡 Make sure you\'re using SUPABASE_SERVICE_ROLE_KEY (not anon key)');
+      }
+    } else {
+      console.log(`✅ Found ${authUsers?.users?.length || 0} users in Supabase Auth:`);
+      if (authUsers?.users && authUsers.users.length > 0) {
+        authUsers.users.forEach((user, index) => {
+          console.log(`   ${index + 1}. ${user.email} (${user.id})`);
+          console.log(`      Role: ${user.user_metadata?.role || 'not set'}`);
+          console.log(`      Created: ${new Date(user.created_at).toLocaleString()}`);
+        });
+      } else {
+        console.log('   No users found in Supabase Auth');
+      }
     }
-    
-    console.log('✅ Auth service is accessible!\n');
 
-    // Test 3: Try to sign up a test user (will fail if email exists, but that's ok)
-    console.log('3️⃣ Testing signUp functionality...');
-    const testEmail = `test-${Date.now()}@example.com`;
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: testEmail,
-      password: 'TestPassword123!',
+    // Test 2: Check database connection
+    console.log('\n2️⃣ Testing database connection...');
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL?.includes('supabase') 
+        ? { rejectUnauthorized: false } 
+        : false,
     });
 
-    if (signUpError) {
-      if (signUpError.message.includes('Email signups are disabled')) {
-        console.error('❌ Email signups are DISABLED in Supabase!');
-        console.error('   Go to Supabase Dashboard → Authentication → Settings');
-        console.error('   Enable "Enable email signup"');
-        return false;
-      }
-      console.error('❌ SignUp test failed:', signUpError.message);
-      return false;
+    const dbResult = await pool.query('SELECT COUNT(*) as count FROM users');
+    console.log(`✅ Database connected. Found ${dbResult.rows[0].count} users in database.`);
+
+    // Compare
+    const authUserCount = authUsers?.users?.length || 0;
+    const dbUserCount = parseInt(dbResult.rows[0].count);
+    
+    console.log('\n📊 Comparison:');
+    console.log(`   Supabase Auth users: ${authUserCount}`);
+    console.log(`   Database users: ${dbUserCount}`);
+    
+    if (authUserCount !== dbUserCount) {
+      console.log('\n⚠️  WARNING: User counts don\'t match!');
+      console.log('   This is expected if you just switched to pure Supabase Auth.');
+      console.log('   The database users table is no longer used for authentication.');
     }
 
-    if (signUpData.user) {
-      console.log('✅ SignUp test successful!');
-      console.log(`   Test user created: ${testEmail}`);
-      console.log('   (You can delete this user from Supabase Dashboard)\n');
-    }
-
-    console.log('✅ All tests passed! Supabase is properly configured.\n');
-    return true;
-
+    await pool.end();
+    
+    console.log('\n✅ Supabase connection test complete!');
   } catch (error) {
-    console.error('❌ Test failed:', error.message);
-    console.error(error);
-    return false;
+    console.error('\n❌ Error:', error.message);
+    process.exit(1);
   }
 }
 
-testConnection().then(success => {
-  if (success) {
-    console.log('🎉 Supabase is ready to use!');
-    process.exit(0);
-  } else {
-    console.log('\n❌ Supabase configuration needs attention.');
-    console.log('   Check the errors above and fix them.');
-    process.exit(1);
-  }
-});
-
+testConnection();

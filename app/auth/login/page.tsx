@@ -52,20 +52,36 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (data.success) {
-                showToast("Login successful! Redirecting...", "success", 2000);
+                // Show success message
+                try {
+                    showToast("Login successful! Redirecting...", "success", 2000);
+                } catch (toastError) {
+                    console.log("Toast error (non-critical):", toastError);
+                }
                 
-                // Small delay for toast visibility
+                // Use window.location for more reliable redirect (works even if router fails)
+                // Small delay to ensure cookie is set
                 setTimeout(() => {
-                    // Redirect based on user role
-                    const userRole = data.data.user.role;
-                    if (userRole === 'admin') {
-                        router.push("/admin");
-                    } else {
-                        router.push("/admin/blog");
+                    const userRole = data.data?.user?.role || 'author';
+                    const redirectPath = userRole === 'admin' ? '/admin' : '/admin/blog';
+                    
+                    // Try router first, fallback to window.location
+                    try {
+                        router.push(redirectPath);
+                        // Also use window.location as backup
+                        setTimeout(() => {
+                            if (window.location.pathname === '/auth/login') {
+                                window.location.href = redirectPath;
+                            }
+                        }, 1000);
+                    } catch (routerError) {
+                        console.error("Router error, using window.location:", routerError);
+                        window.location.href = redirectPath;
                     }
-                }, 500);
+                }, 300);
             } else {
                 setError(data.error || "Login failed");
+                setLoading(false);
             }
         } catch (error) {
             const errorMessage = error instanceof Error 
