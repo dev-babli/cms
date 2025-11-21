@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import AuthLayout from "@/components/auth/AuthLayout";
 import FormField from "@/components/auth/FormField";
@@ -146,16 +147,12 @@ export default function LoginPage() {
                         />
                         <span className="text-sm text-gray-600">Remember me</span>
                     </label>
-                    <a
-                        href="#"
+                    <Link
+                        href="/auth/forgot-password"
                         className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            showToast("Password reset feature coming soon", "info");
-                        }}
                     >
                         Forgot password?
-                    </a>
+                    </Link>
                 </div>
 
                 <Button

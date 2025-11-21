@@ -1,33 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { users } from '@/lib/auth/users';
-import { nanoid } from 'nanoid';
-import db from '@/lib/db';
+import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
-// Store password reset tokens
-async function createResetToken(userId: number): Promise<string> {
-  const token = nanoid(32);
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
-
-  await db.prepare(`
-    INSERT INTO password_reset_tokens (user_id, token, expires_at)
-    VALUES (?, ?, ?)
-  `).run(userId, token, expiresAt.toISOString());
-
-  return token;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email } = ForgotPasswordSchema.parse(body);
 
-    // Find user
+    // Find user in database
     const user = await users.findByEmail(email);
     if (!user) {
       // Don't reveal if user exists (security best practice)
@@ -37,29 +22,68 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ADMIN APPROVAL FEATURE - COMMENTED OUT
     // Check if user is active
+    // if (user.status !== 'active') {
+    //   return NextResponse.json({
+    //     success: false,
+    //     error: 'Account is not active. Please contact an administrator.',
+    //   }, { status: 403 });
+    // }
+    
+    // Auto-activate user if not active
     if (user.status !== 'active') {
-      return NextResponse.json({
-        success: false,
-        error: 'Account is not active. Please contact an administrator.',
-      }, { status: 403 });
+      await users.update(user.id, { status: 'active' });
     }
 
-    // Create reset token
-    const resetToken = await createResetToken(user.id);
-
-    // In production, you would send an email here
-    // For now, we'll return the token (remove this in production!)
-    // TODO: Send email with reset link: /auth/reset-password?token=...
+    // Use Supabase Auth password reset
+    const supabase = createServerClient();
     
+    // If user has Supabase ID, use Supabase password reset
+    if (user.supabase_user_id) {
+      const { error: resetError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+        options: {
+          redirectTo: `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
+        },
+      });
+
+      if (resetError) {
+        console.error('Supabase password reset error:', resetError);
+        // Fall through to generic success message for security
+      }
+    } else {
+      // User doesn't have Supabase Auth account - create one and send reset
+      try {
+        const { data: authData, error: createError } = await supabase.auth.admin.createUser({
+          email: email,
+          password: 'temp-password-' + Date.now(), // Temporary password
+          email_confirm: true,
+        });
+
+        if (!createError && authData?.user) {
+          // Link Supabase user to database user
+          await users.update(user.id, { supabase_user_id: authData.user.id });
+          
+          // Now send password reset
+          await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: email,
+            options: {
+              redirectTo: `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error creating Supabase Auth user for password reset:', error);
+      }
+    }
+
+    // Always return success message (security best practice)
     return NextResponse.json({
       success: true,
       message: 'If an account with that email exists, a password reset link has been sent.',
-      // Remove this in production - only for development!
-      resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
-      resetUrl: process.env.NODE_ENV === 'development' 
-        ? `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/auth/reset-password?token=${resetToken}`
-        : undefined,
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -72,8 +96,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: 'Failed to process request' },
-      { status: 500 }
+      { success: true, message: 'If an account with that email exists, a password reset link has been sent.' },
+      { status: 200 }
     );
   }
 }

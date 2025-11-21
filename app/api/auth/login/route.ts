@@ -13,14 +13,20 @@ let adminInitialized = false;
 
 export async function POST(request: NextRequest) {
   try {
-    // Initialize default admin on first login attempt (lazy initialization)
-    if (!adminInitialized) {
-      await initializeDefaultAdmin();
-      adminInitialized = true;
-    }
-
     const body = await request.json();
     const { email, password } = LoginSchema.parse(body);
+
+    // Initialize default admin on first login attempt (lazy initialization)
+    // Only initialize if trying to login as admin
+    if (!adminInitialized && email === 'admin@emscale.com') {
+      try {
+        await initializeDefaultAdmin();
+      } catch (initError) {
+        console.error('Failed to initialize admin user:', initError);
+        // Continue with login attempt - might already exist
+      }
+      adminInitialized = true;
+    }
 
     // Authenticate with Supabase Auth (secure)
     const supabase = createServerClient();
@@ -37,6 +43,92 @@ export async function POST(request: NextRequest) {
         email: email,
         hasUser: !!authData.user,
       });
+      
+      // If admin user login fails, try to create it again
+      if (email === 'admin@emscale.com' && (authError?.message?.includes('Invalid login credentials') || authError?.message?.includes('User not found'))) {
+        console.log('Admin user not found in Supabase Auth, attempting to create...');
+        try {
+          // Try to create admin in Supabase Auth directly
+          const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+            email: 'admin@emscale.com',
+            password: 'admin123',
+            email_confirm: true,
+            user_metadata: {
+              name: 'System Administrator',
+              role: 'admin',
+            },
+          });
+          
+          if (!createError && createData?.user) {
+            // Update database user with Supabase ID
+            const dbUser = await users.findByEmail('admin@emscale.com');
+            if (dbUser) {
+              await users.update(dbUser.id, { 
+                supabase_user_id: createData.user.id,
+                status: 'active',
+                email_verified: true,
+              });
+            }
+            
+            // Retry login
+            const { data: retryAuth, error: retryError } = await supabase.auth.signInWithPassword({
+              email: 'admin@emscale.com',
+              password: 'admin123',
+            });
+            
+            if (!retryError && retryAuth?.user) {
+              // Continue with successful login flow below
+              const customUser = await users.findByEmail('admin@emscale.com');
+              if (customUser && customUser.status === 'active') {
+                await users.updateLastLogin(customUser.id);
+                const session = await sessions.create(customUser.id);
+                
+                const response = NextResponse.json({
+                  success: true,
+                  data: {
+                    user: {
+                      id: customUser.id,
+                      email: customUser.email,
+                      name: customUser.name,
+                      role: customUser.role,
+                      status: customUser.status,
+                    },
+                    session: {
+                      token: session.token,
+                      expires_at: session.expires_at,
+                    },
+                  },
+                });
+                
+                const isProduction = process.env.NODE_ENV === 'production';
+                response.cookies.set('auth-token', session.token, {
+                  httpOnly: true,
+                  secure: isProduction,
+                  sameSite: 'lax',
+                  maxAge: 30 * 24 * 60 * 60,
+                  path: '/',
+                });
+                
+                if (retryAuth.session?.access_token) {
+                  response.cookies.set('sb-access-token', retryAuth.session.access_token, {
+                    httpOnly: true,
+                    secure: isProduction,
+                    sameSite: 'lax',
+                    maxAge: retryAuth.session.expires_in || 3600,
+                    path: '/',
+                  });
+                }
+                
+                return response;
+              }
+            }
+          } else {
+            console.error('Failed to create admin in Supabase Auth:', createError);
+          }
+        } catch (createErr) {
+          console.error('Error creating admin user:', createErr);
+        }
+      }
       
       // Provide more specific error messages
       let errorMessage = 'Invalid email or password';
@@ -65,28 +157,103 @@ export async function POST(request: NextRequest) {
     // Find user in custom table (for admin approval check)
     const customUser = await users.findByEmail(email);
     if (!customUser) {
-      // User exists in Supabase Auth but not in custom table - sync it
+      // User exists in Supabase Auth but not in custom table - create it automatically
       // This handles migration case
-      return NextResponse.json(
-        { success: false, error: 'Account not found. Please contact administrator.' },
-        { status: 404 }
-      );
+      try {
+        const newUser = await users.create({
+          email: email,
+          password: 'temp-password', // Won't be used since Supabase Auth handles it
+          name: authData.user.user_metadata?.name || email.split('@')[0],
+          role: 'author',
+        });
+        
+        // Link with Supabase Auth
+        await users.update(newUser.id, {
+          supabase_user_id: authData.user.id,
+          status: 'active', // Auto-activate
+          email_verified: true,
+        });
+        
+        // Use the newly created user
+        const updatedUser = await users.findByEmail(email);
+        if (!updatedUser) {
+          return NextResponse.json(
+            { success: false, error: 'Account not found. Please contact administrator.' },
+            { status: 404 }
+          );
+        }
+        
+        // Continue with login using updatedUser
+        await users.updateLastLogin(updatedUser.id);
+        const session = await sessions.create(updatedUser.id);
+        
+        const response = NextResponse.json({
+          success: true,
+          data: {
+            user: {
+              id: updatedUser.id,
+              email: updatedUser.email,
+              name: updatedUser.name,
+              role: updatedUser.role,
+              status: updatedUser.status,
+            },
+            session: {
+              token: session.token,
+              expires_at: session.expires_at,
+            },
+          },
+        });
+        
+        const isProduction = process.env.NODE_ENV === 'production';
+        response.cookies.set('auth-token', session.token, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60,
+          path: '/',
+        });
+        
+        if (authData.session?.access_token) {
+          response.cookies.set('sb-access-token', authData.session.access_token, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: 'lax',
+            maxAge: authData.session.expires_in || 3600,
+            path: '/',
+          });
+        }
+        
+        return response;
+      } catch (createError) {
+        console.error('Error creating user:', createError);
+        return NextResponse.json(
+          { success: false, error: 'Account not found. Please contact administrator.' },
+          { status: 404 }
+        );
+      }
     }
 
+    // ADMIN APPROVAL FEATURE - COMMENTED OUT
     // Check if user is pending approval (admin approval system)
-    if (customUser.status === 'pending') {
-      return NextResponse.json(
-        { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your account.' },
-        { status: 403 }
-      );
-    }
+    // if (customUser.status === 'pending') {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your account.' },
+    //     { status: 403 }
+    //   );
+    // }
 
     // Check if user is active
+    // if (customUser.status !== 'active') {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Account is not active' },
+    //     { status: 401 }
+    //   );
+    // }
+    
+    // Auto-activate user if not active (bypass admin approval)
     if (customUser.status !== 'active') {
-      return NextResponse.json(
-        { success: false, error: 'Account is not active' },
-        { status: 401 }
-      );
+      await users.update(customUser.id, { status: 'active' });
+      customUser.status = 'active';
     }
 
     // Update last login

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { users } from '@/lib/auth/users';
-import db from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
 
 const ResetPasswordSchema = z.object({
@@ -9,65 +8,89 @@ const ResetPasswordSchema = z.object({
   password: z.string().min(6),
 });
 
-// Verify and get reset token
-async function getResetToken(token: string): Promise<{ userId: number } | null> {
-  const result = await db.prepare(`
-    SELECT user_id, expires_at 
-    FROM password_reset_tokens 
-    WHERE token = ? AND used = false
-  `).get(token) as { user_id: number; expires_at: string } | null;
-
-  if (!result) {
-    return null;
-  }
-
-  // Check if token expired
-  const expiresAt = new Date(result.expires_at);
-  if (expiresAt < new Date()) {
-    return null;
-  }
-
-  return { userId: result.user_id };
-}
-
-// Mark token as used
-async function markTokenAsUsed(token: string): Promise<void> {
-  await db.prepare(`
-    UPDATE password_reset_tokens 
-    SET used = true 
-    WHERE token = ?
-  `).run(token);
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { token, password } = ResetPasswordSchema.parse(body);
 
-    // Verify token
-    const tokenData = await getResetToken(token);
-    if (!tokenData) {
+    const supabase = createServerClient();
+
+    // Supabase password reset uses exchangeCodeForSession
+    // The token from email is actually a code that needs to be exchanged
+    try {
+      // Try to exchange the token for a session
+      const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(token);
+
+      if (exchangeError || !sessionData?.session) {
+        // If exchange fails, try verifyOtp method
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: 'recovery',
+        });
+
+        if (verifyError || !verifyData?.user) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid or expired reset token. Please request a new password reset link.' },
+            { status: 400 }
+          );
+        }
+
+        // Update password for verified user
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (updateError) {
+          console.error('Password update error:', updateError);
+          return NextResponse.json(
+            { success: false, error: 'Failed to reset password. Please try again.' },
+            { status: 400 }
+          );
+        }
+
+        // Update database password hash for legacy compatibility
+        const user = await users.findByEmail(verifyData.user.email!);
+        if (user) {
+          const bcrypt = await import('bcryptjs');
+          const passwordHash = await bcrypt.default.hash(password, 12);
+          await users.update(user.id, { password_hash: passwordHash } as any);
+        }
+      } else {
+        // Session created from code, update password
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (updateError) {
+          console.error('Password update error:', updateError);
+          return NextResponse.json(
+            { success: false, error: 'Failed to reset password. Please try again.' },
+            { status: 400 }
+          );
+        }
+
+        // Update database password hash
+        if (sessionData.user?.email) {
+          const user = await users.findByEmail(sessionData.user.email);
+          if (user) {
+            const bcrypt = await import('bcryptjs');
+            const passwordHash = await bcrypt.default.hash(password, 12);
+            await users.update(user.id, { password_hash: passwordHash } as any);
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password has been reset successfully. You can now log in with your new password.',
+      });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
       return NextResponse.json(
-        { success: false, error: 'Invalid or expired reset token' },
+        { success: false, error: 'Invalid or expired reset token. Please request a new password reset link.' },
         { status: 400 }
       );
     }
-
-    // Update password
-    const passwordHash = await bcrypt.hash(password, 12);
-    await db.prepare(`
-      UPDATE users 
-      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `).run(passwordHash, tokenData.userId);
-
-    // Mark token as used
-    await markTokenAsUsed(token);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Password has been reset successfully. You can now log in with your new password.',
-    });
   } catch (error) {
     console.error('Reset password error:', error);
     

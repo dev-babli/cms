@@ -78,12 +78,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ADMIN APPROVAL FEATURE - COMMENTED OUT
     // Create custom user record with 'pending' status (admin approval required)
     // Link with Supabase Auth user via supabase_user_id
     // Note: password_hash is NULL for Supabase Auth users (authentication handled by Supabase)
+    // const stmt = db.prepare(`
+    //   INSERT INTO users (email, name, role, status, email_verified, supabase_user_id, password_hash)
+    //   VALUES (?, ?, ?, 'pending', ?, ?, NULL)
+    //   RETURNING *
+    // `);
+    
+    // AUTO-ACTIVATE USERS (admin approval disabled)
     const stmt = db.prepare(`
       INSERT INTO users (email, name, role, status, email_verified, supabase_user_id, password_hash)
-      VALUES (?, ?, ?, 'pending', ?, ?, NULL)
+      VALUES (?, ?, ?, 'active', ?, ?, NULL)
       RETURNING *
     `);
     
@@ -105,10 +113,27 @@ export async function POST(request: NextRequest) {
       // The user can be manually linked later if needed
     }
 
+    // ADMIN APPROVAL FEATURE - COMMENTED OUT
     // Don't create session - user must wait for admin approval
+    // return NextResponse.json({
+    //   success: true,
+    //   message: 'Registration successful. Your account is pending admin approval. You will be notified once approved.',
+    //   data: {
+    //     user: customUser ? {
+    //       id: customUser.id,
+    //       email: customUser.email,
+    //       name: customUser.name,
+    //       status: customUser.status,
+    //     } : null,
+    //     requiresApproval: true,
+    //     emailSent: !!authData.session,
+    //   },
+    // });
+    
+    // AUTO-ACTIVATE: User is immediately active, can login right away
     return NextResponse.json({
       success: true,
-      message: 'Registration successful. Your account is pending admin approval. You will be notified once approved.',
+      message: 'Registration successful. You can now log in.',
       data: {
         user: customUser ? {
           id: customUser.id,
@@ -116,7 +141,7 @@ export async function POST(request: NextRequest) {
           name: customUser.name,
           status: customUser.status,
         } : null,
-        requiresApproval: true,
+        requiresApproval: false,
         // Supabase will send email verification if configured
         emailSent: !!authData.session,
       },

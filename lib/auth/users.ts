@@ -275,12 +275,27 @@ export const initializeDefaultAdmin = async (): Promise<void> => {
         },
       });
       
-      if (!authError && authData?.user) {
+      if (authError) {
+        // If user already exists in Supabase Auth, try to find and link it
+        if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
+          const { data: existingUsers } = await supabase.auth.admin.listUsers();
+          const existingUser = existingUsers?.users?.find((u: any) => u.email === 'admin@emscale.com');
+          if (existingUser) {
+            supabaseUserId = existingUser.id;
+            console.log('Admin user already exists in Supabase Auth, linking...');
+          }
+        } else {
+          console.error('Failed to create Supabase Auth user:', authError.message);
+          throw authError;
+        }
+      } else if (authData?.user) {
         supabaseUserId = authData.user.id;
+        console.log('Admin user created in Supabase Auth successfully');
       }
-    } catch (supabaseError) {
-      // Supabase Auth not available - create database-only user
-      console.warn('Could not create Supabase Auth user:', supabaseError);
+    } catch (supabaseError: any) {
+      // Log error but don't fail completely - will try to create in database
+      console.error('Supabase Auth error during admin creation:', supabaseError?.message || supabaseError);
+      // Continue to create database user - login will fail but at least user exists
     }
     
     // Create user in database
