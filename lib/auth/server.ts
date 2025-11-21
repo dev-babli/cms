@@ -17,79 +17,59 @@ export async function getCurrentUser() {
     
     const supabase = createServerClient();
     
-    // For server-side with service role key, we can verify the JWT token
-    // by using the admin API to get user info from the token
-    // First, try to decode and get user ID from token (simplified approach)
-    
-    // Use admin API to verify token - get user by extracting info from token
-    // Since we have service role key, we can use admin.listUsers and match by token
-    // But simpler: verify token by calling getUser with the token
-    
-    // Create a client with the user's access token (not service role)
-    // We need to use the anon key but with the user's access token
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    
-    if (!anonKey || !supabaseUrl) {
-      console.error('Missing Supabase anon key or URL for user verification');
-      return null;
-    }
-    
-    // Create a client with anon key and set the user's access token
-    const { createClient } = await import('@supabase/supabase-js');
-    const userSupabase = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-    
-    // Verify the token by getting the user
-    const { data: { user }, error: userError } = await userSupabase.auth.getUser();
-    
-    if (userError || !user) {
-      // If that fails, try using admin API with service role key
-      // Extract user ID from token payload (basic JWT decode)
-      try {
-        const tokenParts = accessToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-          const userId = payload.sub;
-          
-          if (userId) {
-            const { data: adminUser, error: adminError } = await supabase.auth.admin.getUserById(userId);
-            if (!adminError && adminUser?.user) {
-              return {
-                id: adminUser.user.id,
-                email: adminUser.user.email || '',
-                name: adminUser.user.user_metadata?.name || adminUser.user.email?.split('@')[0] || 'User',
-                role: adminUser.user.user_metadata?.role || 'author',
-                status: 'active',
-              };
-            }
-          }
-        }
-      } catch (decodeError) {
-        console.error('Error decoding token:', decodeError);
+    // Decode JWT token to get user ID
+    try {
+      const tokenParts = accessToken.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('Invalid JWT token format');
+        return null;
       }
       
+      // Decode the payload (second part of JWT)
+      let payload;
+      try {
+        // Handle base64url encoding (Supabase uses base64url, not base64)
+        const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+        payload = JSON.parse(Buffer.from(padded, 'base64').toString());
+      } catch (e) {
+        // Fallback to regular base64
+        payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+      }
+      
+      const userId = payload.sub;
+      
+      if (!userId) {
+        console.error('No user ID in token payload');
+        return null;
+      }
+      
+      // Use admin API to get user by ID
+      const { data: adminUser, error: adminError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (adminError) {
+        console.error('Error getting user from Supabase:', adminError.message);
+        return null;
+      }
+      
+      if (!adminUser?.user) {
+        console.error('User not found in Supabase');
+        return null;
+      }
+      
+      return {
+        id: adminUser.user.id,
+        email: adminUser.user.email || '',
+        name: adminUser.user.user_metadata?.name || adminUser.user.email?.split('@')[0] || 'User',
+        role: adminUser.user.user_metadata?.role || 'author',
+        status: 'active',
+      };
+    } catch (decodeError: any) {
+      console.error('Error decoding/verifying token:', decodeError?.message || decodeError);
       return null;
     }
-    
-    return {
-      id: user.id,
-      email: user.email || '',
-      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-      role: user.user_metadata?.role || 'author',
-      status: 'active',
-    };
-  } catch (error) {
-    console.error('Error getting current user:', error);
+  } catch (error: any) {
+    console.error('Error getting current user:', error?.message || error);
     return null;
   }
 }

@@ -11,11 +11,15 @@ export function middleware(request: NextRequest) {
   
   // Check authentication for admin routes
   if (pathname.startsWith('/admin/')) {
-    const token = request.cookies.get('auth-token')?.value;
+    // Check for Supabase access token (new auth system)
+    const supabaseToken = request.cookies.get('sb-access-token')?.value;
+    
+    // Also check for legacy auth-token for backward compatibility
+    const legacyToken = request.cookies.get('auth-token')?.value;
     
     // Simple check: if no token exists, redirect to login
     // Actual token validation happens in API routes (Node.js runtime)
-    if (!token) {
+    if (!supabaseToken && !legacyToken) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
     
