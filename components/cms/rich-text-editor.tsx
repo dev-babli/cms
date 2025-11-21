@@ -22,7 +22,10 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                // Disable Link from StarterKit since we're configuring it separately
+                link: false,
+            }),
             Link.configure({
                 openOnClick: false,
                 HTMLAttributes: {

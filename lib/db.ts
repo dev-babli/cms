@@ -32,9 +32,12 @@ function getConnectionConfig() {
       : false,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 30000, // Increased to 30 seconds for Supabase
+    statement_timeout: 30000, // 30 second statement timeout
+    query_timeout: 30000, // 30 second query timeout
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000,
+    allowExitOnIdle: false, // Keep pool alive
   };
 }
 
@@ -62,7 +65,7 @@ pool.on('error', (err) => {
 });
 
 // Helper function to execute queries with retry logic
-export const query = async (text: string, params?: any[], retries = 2): Promise<any> => {
+export const query = async (text: string, params?: any[], retries = 3): Promise<any> => {
   const start = Date.now();
   
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -78,12 +81,18 @@ export const query = async (text: string, params?: any[], retries = 2): Promise<
       // Check if it's a connection error that we should retry
       const isConnectionError = error.code === 'ECONNREFUSED' || 
                                  error.code === 'ETIMEDOUT' ||
+                                 error.code === 'ENOTFOUND' ||
+                                 error.message?.includes('timeout') ||
+                                 error.message?.includes('timeout exceeded') ||
                                  error.message?.includes('terminated') ||
-                                 error.message?.includes('shutdown');
+                                 error.message?.includes('shutdown') ||
+                                 error.message?.includes('Connection terminated');
       
       if (isConnectionError && attempt < retries) {
-        // Wait a bit before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        console.warn(`⚠️ Connection error (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms...`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
       
@@ -92,17 +101,26 @@ export const query = async (text: string, params?: any[], retries = 2): Promise<
         console.error('❌ Database Authentication Failed!');
         console.error('   Error:', error.message);
         console.error('   💡 Check DATABASE_URL in Vercel environment variables');
-        console.error('   💡 Verify password is correct: soumeet2006');
+        console.error('   💡 Verify password is correct');
         console.error('   💡 Connection string format: postgresql://postgres.xxx:password@host:port/db');
       }
       
       // Log and throw the error
+      const connectionString = process.env.DATABASE_URL || '';
+      const maskedConnection = connectionString.replace(/:([^@]+)@/, ':****@');
       console.error('Query error', { 
         text: text.substring(0, 100), 
         error: error.message,
         code: error.code,
-        attempt: attempt + 1 
+        attempt: attempt + 1,
+        connectionString: maskedConnection
       });
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
+        throw new Error(`Database connection timeout. Please check your DATABASE_URL and network connection. If using Supabase, try the pooler connection (port 6543). Original error: ${error.message}`);
+      }
+      
       throw error;
     }
   }

@@ -10,6 +10,12 @@ export async function GET(request: NextRequest) {
     
     const posts = await blogPosts.getAll(published);
     
+    // Log for debugging
+    console.log(`📝 Blog API: Returning ${posts.length} ${published ? 'published' : 'all'} posts`);
+    if (posts.length > 0) {
+      console.log('📝 Post slugs:', posts.map((p: any) => ({ slug: p.slug, title: p.title, published: p.published })));
+    }
+    
     // Enable CORS for React app
     return NextResponse.json(
       { success: true, data: posts },
@@ -18,12 +24,24 @@ export async function GET(request: NextRequest) {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Cache-Control': 'no-store, no-cache, must-revalidate', // Prevent caching
         },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ Blog API Error:', error);
+    const errorMessage = error?.message || 'Failed to fetch blog posts';
+    console.error('Error details:', {
+      message: errorMessage,
+      code: error?.code,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch blog posts' },
+      { 
+        success: false, 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       {
         status: 500,
         headers: {
@@ -94,8 +112,13 @@ export async function POST(request: NextRequest) {
         },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Blog post creation error:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+    });
     
     // Better error handling for Zod validation
     if (error instanceof z.ZodError) {
@@ -120,7 +143,11 @@ export async function POST(request: NextRequest) {
     
     const errorMessage = error instanceof Error ? error.message : 'Failed to create blog post';
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { 
+        success: false, 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       {
         status: 500,
         headers: {

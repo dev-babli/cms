@@ -47,7 +47,7 @@ function encodeConnectionString(connectionString: string): string {
 const rawConnectionString = process.env.DATABASE_URL || '';
 const encodedConnectionString = encodeConnectionString(rawConnectionString);
 
-// Create connection pool
+// Create connection pool with optimized settings for Supabase
 const pool = new Pool({
   connectionString: encodedConnectionString,
   ssl: encodedConnectionString.includes('supabase') 
@@ -55,10 +55,14 @@ const pool = new Pool({
     : false,
   max: 10, // Reduced for Supabase connection limits
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000, // Increased timeout for Supabase
+  connectionTimeoutMillis: 30000, // Increased to 30 seconds for Supabase
+  statement_timeout: 30000, // 30 second statement timeout
+  query_timeout: 30000, // 30 second query timeout
   // Supabase connection pooler settings
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
+  // Additional connection retry settings
+  allowExitOnIdle: false, // Keep pool alive
 });
 
 // Test connection
@@ -81,7 +85,7 @@ pool.on('error', (err) => {
 });
 
 // Helper function to execute queries with retry logic
-export const query = async (text: string, params?: any[], retries = 2): Promise<any> => {
+export const query = async (text: string, params?: any[], retries = 3): Promise<any> => {
   const start = Date.now();
   
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -97,12 +101,18 @@ export const query = async (text: string, params?: any[], retries = 2): Promise<
       // Check if it's a connection error that we should retry
       const isConnectionError = error.code === 'ECONNREFUSED' || 
                                  error.code === 'ETIMEDOUT' ||
+                                 error.code === 'ENOTFOUND' ||
+                                 error.message?.includes('timeout') ||
+                                 error.message?.includes('timeout exceeded') ||
                                  error.message?.includes('terminated') ||
-                                 error.message?.includes('shutdown');
+                                 error.message?.includes('shutdown') ||
+                                 error.message?.includes('Connection terminated');
       
       if (isConnectionError && attempt < retries) {
-        // Wait a bit before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        console.warn(`⚠️ Connection error (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms...`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
       
@@ -111,8 +121,15 @@ export const query = async (text: string, params?: any[], retries = 2): Promise<
         text: text.substring(0, 100), 
         error: error.message,
         code: error.code,
-        attempt: attempt + 1 
+        attempt: attempt + 1,
+        connectionString: rawConnectionString.replace(/:([^@]+)@/, ':****@') // Mask password
       });
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
+        throw new Error(`Database connection timeout. Please check your DATABASE_URL and network connection. Original error: ${error.message}`);
+      }
+      
       throw error;
     }
   }

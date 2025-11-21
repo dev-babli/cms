@@ -34,6 +34,15 @@ export default function FormField({
           className={`h-12 ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} transition-all ${className}`}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${inputProps.id}-error` : hint ? `${inputProps.id}-hint` : undefined}
+          autoComplete={
+            inputProps.type === 'password' 
+              ? inputProps.id === 'password' || inputProps.id === 'confirmPassword'
+                ? 'current-password'
+                : 'new-password'
+              : inputProps.type === 'email'
+              ? 'email'
+              : inputProps.autoComplete
+          }
         />
       </div>
       {error && (
