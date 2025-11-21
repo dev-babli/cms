@@ -155,114 +155,114 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user in custom table (for admin approval check)
-    const customUser = await users.findByEmail(email);
+    let customUser = await users.findByEmail(email);
     if (!customUser) {
-      // User exists in Supabase Auth but not in custom table - create it automatically
+      // User exists in Supabase Auth but not in custom table - create it automatically with ACTIVE status
       // This handles migration case
       try {
-        const newUser = await users.create({
-          email: email,
-          password: 'temp-password', // Won't be used since Supabase Auth handles it
-          name: authData.user.user_metadata?.name || email.split('@')[0],
-          role: 'author',
-        });
+        const db = await import('@/lib/db');
+        const bcrypt = await import('bcryptjs');
         
-        // Link with Supabase Auth
-        await users.update(newUser.id, {
-          supabase_user_id: authData.user.id,
-          status: 'active', // Auto-activate
-          email_verified: true,
-        });
+        // Create user directly with 'active' status (admin approval disabled)
+        const passwordHash = await bcrypt.default.hash('temp-' + Date.now(), 12);
+        const stmt = db.default.prepare(`
+          INSERT INTO users (email, password_hash, name, role, status, email_verified, supabase_user_id)
+          VALUES (?, ?, ?, ?, 'active', true, ?)
+          RETURNING *
+        `);
         
-        // Use the newly created user
-        const updatedUser = await users.findByEmail(email);
-        if (!updatedUser) {
+        const userName = authData.user.user_metadata?.name || email.split('@')[0];
+        const userRole = authData.user.user_metadata?.role || 'author';
+        
+        const result = await stmt.run(
+          email,
+          passwordHash,
+          userName,
+          userRole,
+          authData.user.id
+        );
+        
+        // Get the created user
+        customUser = await users.findByEmail(email);
+        if (!customUser) {
+          console.error('Failed to retrieve created user');
           return NextResponse.json(
-            { success: false, error: 'Account not found. Please contact administrator.' },
-            { status: 404 }
+            { success: false, error: 'Failed to create user account. Please try again.' },
+            { status: 500 }
           );
         }
-        
-        // Continue with login using updatedUser
-        await users.updateLastLogin(updatedUser.id);
-        const session = await sessions.create(updatedUser.id);
-        
-        const response = NextResponse.json({
-          success: true,
-          data: {
-            user: {
-              id: updatedUser.id,
-              email: updatedUser.email,
-              name: updatedUser.name,
-              role: updatedUser.role,
-              status: updatedUser.status,
-            },
-            session: {
-              token: session.token,
-              expires_at: session.expires_at,
-            },
-          },
-        });
-        
-        const isProduction = process.env.NODE_ENV === 'production';
-        response.cookies.set('auth-token', session.token, {
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: 'lax',
-          maxAge: 30 * 24 * 60 * 60,
-          path: '/',
-        });
-        
-        if (authData.session?.access_token) {
-          response.cookies.set('sb-access-token', authData.session.access_token, {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: 'lax',
-            maxAge: authData.session.expires_in || 3600,
-            path: '/',
-          });
-        }
-        
-        return response;
-      } catch (createError) {
+      } catch (createError: any) {
         console.error('Error creating user:', createError);
         return NextResponse.json(
-          { success: false, error: 'Account not found. Please contact administrator.' },
-          { status: 404 }
+          { success: false, error: 'Failed to create user account. Please contact administrator.' },
+          { status: 500 }
         );
+      }
+    } else {
+      // User exists - ensure it's linked to Supabase Auth and active
+      if (!customUser.supabase_user_id) {
+        await users.update(customUser.id, {
+          supabase_user_id: authData.user.id,
+          status: 'active',
+          email_verified: true,
+        });
+        customUser = await users.findByEmail(email);
       }
     }
 
-    // ADMIN APPROVAL FEATURE - COMMENTED OUT
-    // Check if user is pending approval (admin approval system)
-    // if (customUser.status === 'pending') {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your account.' },
-    //     { status: 403 }
-    //   );
-    // }
+    // Ensure customUser exists (should always be true at this point, but TypeScript check)
+    if (!customUser) {
+      console.error('User not found after creation attempt');
+      return NextResponse.json(
+        { success: false, error: 'Account not found. Please contact administrator.' },
+        { status: 404 }
+      );
+    }
 
-    // Check if user is active
-    // if (customUser.status !== 'active') {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Account is not active' },
-    //     { status: 401 }
-    //   );
-    // }
+    // ADMIN APPROVAL FEATURE - COMMENTED OUT
+    // All status checks disabled - if Supabase Auth succeeds, allow login
     
     // Auto-activate user if not active (bypass admin approval)
     if (customUser.status !== 'active') {
-      await users.update(customUser.id, { status: 'active' });
-      customUser.status = 'active';
+      try {
+        await users.update(customUser.id, { status: 'active' });
+        customUser.status = 'active';
+      } catch (updateError) {
+        console.error('Error updating user status:', updateError);
+        // Continue anyway - don't block login
+      }
     }
 
-    // Update last login
-    await users.updateLastLogin(customUser.id);
+    // Update last login (don't fail if this errors)
+    try {
+      await users.updateLastLogin(customUser.id);
+    } catch (updateError) {
+      console.error('Error updating last login:', updateError);
+      // Continue anyway
+    }
 
     // Create session (using custom session system for compatibility)
-    const session = await sessions.create(customUser.id);
+    let session;
+    try {
+      session = await sessions.create(customUser.id);
+    } catch (sessionError) {
+      console.error('Error creating session:', sessionError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create session. Please try again.' },
+        { status: 500 }
+      );
+    }
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create session. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     // Set cookie with Supabase session token (for Supabase Auth)
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     const response = NextResponse.json({
       success: true,
       data: {
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
           email: customUser.email,
           name: customUser.name,
           role: customUser.role,
-          status: customUser.status,
+          status: customUser.status || 'active',
         },
         session: {
           token: session.token,
@@ -282,28 +282,31 @@ export async function POST(request: NextRequest) {
 
     // Set both cookies for compatibility
     // Cookie configuration optimized for Vercel production
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    // Custom session cookie
-    response.cookies.set('auth-token', session.token, {
-      httpOnly: true,
-      secure: isProduction, // HTTPS required in production
-      sameSite: 'lax', // Allows cross-site navigation while protecting against CSRF
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
-      // Don't set domain - allows Vercel subdomains to work
-    });
-
-    // Supabase session cookie (if available)
-    if (authData.session?.access_token) {
-      response.cookies.set('sb-access-token', authData.session.access_token, {
+    try {
+      // Custom session cookie
+      response.cookies.set('auth-token', session.token, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: authData.session.expires_in || 3600,
+        secure: isProduction, // HTTPS required in production
+        sameSite: 'lax', // Allows cross-site navigation while protecting against CSRF
+        maxAge: 30 * 24 * 60 * 60, // 30 days
         path: '/',
         // Don't set domain - allows Vercel subdomains to work
       });
+
+      // Supabase session cookie (if available)
+      if (authData.session?.access_token) {
+        response.cookies.set('sb-access-token', authData.session.access_token, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: 'lax',
+          maxAge: authData.session.expires_in || 3600,
+          path: '/',
+          // Don't set domain - allows Vercel subdomains to work
+        });
+      }
+    } catch (cookieError) {
+      console.error('Error setting cookies:', cookieError);
+      // Continue anyway - cookies might still work
     }
 
     return response;
