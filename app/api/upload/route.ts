@@ -7,6 +7,20 @@ import { createServerClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate Supabase configuration first
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Supabase configuration missing. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.' 
+        },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -57,22 +71,51 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Supabase Storage
-    const supabase = createServerClient();
+    let supabase;
+    try {
+      supabase = createServerClient();
+    } catch (clientError: any) {
+      console.error('Failed to create Supabase client:', clientError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Supabase client initialization failed: ${clientError.message || 'Unknown error'}` 
+        },
+        { status: 500 }
+      );
+    }
+
     const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'cms-media';
     
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(finalFilename, finalBuffer, {
-        contentType: mimeType,
-        upsert: false, // Don't overwrite existing files
-      });
+    let uploadData, uploadError;
+    try {
+      const uploadResult = await supabase.storage
+        .from(bucketName)
+        .upload(finalFilename, finalBuffer, {
+          contentType: mimeType,
+          upsert: false, // Don't overwrite existing files
+        });
+      uploadData = uploadResult.data;
+      uploadError = uploadResult.error;
+    } catch (storageError: any) {
+      console.error('Supabase Storage upload exception:', storageError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Storage upload failed: ${storageError.message || 'Unknown error'}` 
+        },
+        { status: 500 }
+      );
+    }
 
     if (uploadError) {
       console.error('Supabase Storage upload error:', uploadError);
       
       // If bucket doesn't exist, provide helpful error
-      if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('does not exist')) {
+      if (uploadError.message?.includes('Bucket not found') || 
+          uploadError.message?.includes('does not exist') ||
+          uploadError.message?.includes('The resource was not found')) {
         return NextResponse.json(
           { 
             success: false, 
@@ -83,17 +126,28 @@ export async function POST(request: NextRequest) {
       }
       
       return NextResponse.json(
-        { success: false, error: `Upload failed: ${uploadError.message}` },
+        { success: false, error: `Upload failed: ${uploadError.message || 'Unknown storage error'}` },
         { status: 500 }
       );
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(bucketName)
-      .getPublicUrl(finalFilename);
-
-    const publicUrl = urlData.publicUrl;
+    let publicUrl: string;
+    try {
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(finalFilename);
+      publicUrl = urlData.publicUrl;
+    } catch (urlError: any) {
+      console.error('Failed to get public URL:', urlError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Failed to get file URL: ${urlError.message || 'Unknown error'}` 
+        },
+        { status: 500 }
+      );
+    }
 
     // Save to database
     const stmt = db.prepare(`

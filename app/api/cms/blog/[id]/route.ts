@@ -22,8 +22,21 @@ export async function GET(
 ) {
   try {
     const { id: paramId } = await params;
+    
+    // Try to parse as ID first, if it's a number
     const id = parseInt(paramId);
-    const post = await blogPosts.getBySlug(paramId);
+    let post;
+    
+    if (!isNaN(id) && id > 0) {
+      // If it's a valid number, try to get by ID
+      const allPosts = await blogPosts.getAll(false);
+      post = allPosts.find((p: any) => p.id === id);
+    }
+    
+    // If not found by ID or param is not a number, try by slug
+    if (!post) {
+      post = await blogPosts.getBySlug(paramId);
+    }
     
     if (!post) {
       return NextResponse.json(
@@ -40,6 +53,7 @@ export async function GET(
       { headers: corsHeaders }
     );
   } catch (error) {
+    console.error('Error fetching blog post:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch post' },
       {

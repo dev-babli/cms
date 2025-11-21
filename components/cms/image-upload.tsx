@@ -35,22 +35,51 @@ export function ImageUpload({ onUpload, currentUrl }: ImageUploadProps) {
                 body: formData,
             });
 
+            // Check content type before parsing
+            const contentType = res.headers.get('content-type');
+            const isJson = contentType?.includes('application/json');
+
             // Check if response is OK before parsing JSON
             if (!res.ok) {
                 // Try to get error message from response
                 let errorMessage = 'Upload failed';
                 try {
-                    const errorData = await res.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch {
-                    // If response is not JSON, use status text
-                    errorMessage = res.statusText || errorMessage;
+                    if (isJson) {
+                        const errorData = await res.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } else {
+                        // Response is not JSON, read as text
+                        const text = await res.text();
+                        errorMessage = text || res.statusText || errorMessage;
+                        // If it looks like HTML, extract meaningful part
+                        if (text.includes('<')) {
+                            errorMessage = `Server error (${res.status}): ${res.statusText}`;
+                        }
+                    }
+                } catch (parseError) {
+                    // If parsing fails, use status text
+                    errorMessage = res.statusText || `HTTP ${res.status}`;
                 }
                 alert(`Upload failed: ${errorMessage}`);
                 return;
             }
 
-            const data = await res.json();
+            // Parse successful response
+            let data;
+            try {
+                if (isJson) {
+                    data = await res.json();
+                } else {
+                    // Response is not JSON, try to parse anyway
+                    const text = await res.text();
+                    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+                }
+            } catch (parseError: any) {
+                console.error('Failed to parse response:', parseError);
+                alert(`Upload error: Failed to parse server response. ${parseError.message}`);
+                return;
+            }
+
             if (data.success && data.data) {
                 onUpload(data.data.url);
             } else {
