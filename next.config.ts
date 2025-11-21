@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false, // Security: Remove X-Powered-By header
   reactStrictMode: true,
-  swcMinify: true,
+  // swcMinify is enabled by default in Next.js 15
   // Removed outputFileTracingRoot to fix Vercel deployment path issues
 };
 
