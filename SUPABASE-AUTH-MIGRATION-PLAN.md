@@ -128,3 +128,4 @@ I'll help you migrate to Supabase Auth while keeping your admin approval system.
 
 **This is the right call for security!** Let's implement it properly. 🔐
 
+

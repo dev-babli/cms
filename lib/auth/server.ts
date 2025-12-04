@@ -57,11 +57,26 @@ export async function getCurrentUser() {
         return null;
       }
       
+      // Get role from user_metadata (primary) or app_metadata (fallback)
+      const role = adminUser.user.user_metadata?.role 
+        || adminUser.user.app_metadata?.role 
+        || 'author';
+      
+      // Log role detection for debugging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 User role detection:', {
+          email: adminUser.user.email,
+          user_metadata_role: adminUser.user.user_metadata?.role,
+          app_metadata_role: adminUser.user.app_metadata?.role,
+          final_role: role,
+        });
+      }
+      
       return {
         id: adminUser.user.id,
         email: adminUser.user.email || '',
         name: adminUser.user.user_metadata?.name || adminUser.user.email?.split('@')[0] || 'User',
-        role: adminUser.user.user_metadata?.role || 'author',
+        role: role,
         status: 'active',
       };
     } catch (decodeError: any) {

@@ -70,15 +70,30 @@ export async function POST(request: NextRequest) {
     // Check authentication using Supabase Auth
     const user = await getCurrentUser();
     if (!user) {
+      console.error('❌ User creation attempt: Not authenticated');
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
         { status: 401 }
       );
     }
 
+    // Log role check for debugging
+    console.log('🔍 User creation attempt:', {
+      email: user.email,
+      role: user.role,
+      isAdmin: user.role === 'admin',
+    });
+
     if (user.role !== 'admin') {
+      console.error('❌ User creation attempt: Admin access required', {
+        email: user.email,
+        role: user.role,
+      });
       return NextResponse.json(
-        { success: false, error: 'Admin access required' },
+        { 
+          success: false, 
+          error: 'Admin access required. Your current role is: ' + user.role + '. Please contact an administrator to update your role.' 
+        },
         { status: 403 }
       );
     }

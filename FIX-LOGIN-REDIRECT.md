@@ -66,3 +66,4 @@ If admin page still redirects to login, the issue is in `getCurrentUser()`. Chec
 
 If server-side redirect still fails, we can add a client-side check on the admin page that redirects if not authenticated, but this is less secure.
 
+

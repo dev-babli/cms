@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface User {
-    id: number;
+    id: number | string;
     email: string;
     name: string;
     role: 'admin' | 'editor' | 'author' | 'viewer';
@@ -19,8 +19,10 @@ interface User {
 }
 
 export default function UsersPage() {
+    const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [authenticated, setAuthenticated] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [createLoading, setCreateLoading] = useState(false);
     const [error, setError] = useState("");
@@ -32,8 +34,22 @@ export default function UsersPage() {
     });
 
     useEffect(() => {
-        fetchUsers();
+        checkAuth();
     }, []);
+
+    const checkAuth = async () => {
+        try {
+            const res = await fetch("/api/auth/check");
+            if (res.ok) {
+                setAuthenticated(true);
+                fetchUsers();
+            } else {
+                router.push("/auth/login");
+            }
+        } catch (error) {
+            router.push("/auth/login");
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -77,7 +93,7 @@ export default function UsersPage() {
         }
     };
 
-    const handleDeleteUser = async (userId: number) => {
+    const handleDeleteUser = async (userId: number | string) => {
         if (!confirm("Are you sure you want to delete this user?")) return;
 
         try {
@@ -93,7 +109,7 @@ export default function UsersPage() {
         }
     };
 
-    const handleUpdateUserStatus = async (userId: number, status: string) => {
+    const handleUpdateUserStatus = async (userId: number | string, status: string) => {
         try {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "PUT",
@@ -113,25 +129,25 @@ export default function UsersPage() {
 
     const getRoleColor = (role: string) => {
         switch (role) {
-            case 'admin': return 'bg-red-100 text-red-800';
-            case 'editor': return 'bg-blue-100 text-blue-800';
-            case 'author': return 'bg-green-100 text-green-800';
-            case 'viewer': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'admin': return 'bg-red-100 text-red-800 border-red-200';
+            case 'editor': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'author': return 'bg-green-100 text-green-800 border-green-200';
+            case 'viewer': return 'bg-slate-100 text-slate-800 border-slate-200';
+            default: return 'bg-slate-100 text-slate-800 border-slate-200';
         }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'active': return 'bg-green-100 text-green-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'inactive': return 'bg-gray-100 text-gray-800';
-            case 'suspended': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'active': return 'bg-green-100 text-green-800 border-green-200';
+            case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'inactive': return 'bg-slate-100 text-slate-800 border-slate-200';
+            case 'suspended': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-slate-100 text-slate-800 border-slate-200';
         }
     };
 
-    const handleApproveUser = async (userId: number) => {
+    const handleApproveUser = async (userId: number | string) => {
         try {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "PUT",
@@ -149,7 +165,7 @@ export default function UsersPage() {
         }
     };
 
-    const handleRejectUser = async (userId: number) => {
+    const handleRejectUser = async (userId: number | string) => {
         if (!confirm("Are you sure you want to reject this user? They will be deleted.")) return;
         
         try {
@@ -168,34 +184,47 @@ export default function UsersPage() {
     const pendingUsers = users.filter(user => user.status === 'pending');
     const activeUsers = users.filter(user => user.status !== 'pending');
 
-    if (loading) {
+    if (!authenticated || loading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading users...</p>
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-600">Loading users...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="px-6 py-4">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
+            {/* Premium Header */}
+            <header className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link href="/admin">
-                                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                </button>
+                            <Link 
+                                href="/admin"
+                                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors group"
+                            >
+                                <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Dashboard
                             </Link>
-                            <h1 className="text-2xl font-semibold">User Management</h1>
+                            <div className="h-6 w-px bg-slate-300"></div>
+                            <div>
+                                <h1 className="text-2xl font-bold gradient-text">User Management</h1>
+                                <p className="text-sm text-slate-600 font-medium">{users.length} {users.length === 1 ? 'user' : 'users'} total • Admin Only</p>
+                            </div>
                         </div>
-                        <Button onClick={() => setShowCreateForm(true)}>
+                        <Button 
+                            onClick={() => setShowCreateForm(true)}
+                            size="lg"
+                            className="btn-premium flex items-center gap-2 group"
+                        >
+                            <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
                             Add User
                         </Button>
                     </div>
@@ -203,165 +232,87 @@ export default function UsersPage() {
             </header>
 
             {/* Content */}
-            <div className="px-6 py-8">
-                <div className="max-w-7xl mx-auto">
-                    {/* Pending Users Section */}
-                    {pendingUsers.length > 0 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm mb-6">
-                            <div className="px-6 py-4 border-b border-yellow-200">
-                                <h2 className="text-lg font-medium text-yellow-900">
-                                    Pending Approval ({pendingUsers.length})
-                                </h2>
-                                <p className="text-sm text-yellow-700 mt-1">
-                                    These users are waiting for admin approval
-                                </p>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-yellow-100">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
-                                                User
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
-                                                Role
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
-                                                Registered
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-yellow-800 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-yellow-200">
-                                        {pendingUsers.map((user) => (
-                                            <tr key={user.id} className="hover:bg-yellow-50">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="flex-shrink-0 h-10 w-10">
-                                                            <div className="h-10 w-10 rounded-full bg-yellow-300 flex items-center justify-center">
-                                                                <span className="text-sm font-medium text-yellow-800">
-                                                                    {user.name.charAt(0).toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {user.name}
-                                                            </div>
-                                                            <div className="text-sm text-gray-500">
-                                                                {user.email}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                                                        {user.role}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {new Date(user.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                                    <button
-                                                        onClick={() => handleApproveUser(user.id)}
-                                                        className="text-green-600 hover:text-green-900 font-medium"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <span className="text-gray-300">|</span>
-                                                    <button
-                                                        onClick={() => handleRejectUser(user.id)}
-                                                        className="text-red-600 hover:text-red-900 font-medium"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+            <div className="max-w-7xl mx-auto px-6 py-12">
+                {/* Pending Users Section */}
+                {pendingUsers.length > 0 && (
+                    <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-2xl shadow-sm mb-8 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-yellow-200 bg-yellow-100/50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-yellow-900">
+                                        Pending Approval ({pendingUsers.length})
+                                    </h2>
+                                    <p className="text-sm text-yellow-700">
+                                        These users are waiting for admin approval
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    )}
-
-                    {/* All Users Table */}
-                    <div className="bg-white rounded-lg border shadow-sm">
-                        <div className="px-6 py-4 border-b">
-                            <h2 className="text-lg font-medium">All Users ({users.length})</h2>
-                        </div>
-
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50">
+                                <thead className="bg-yellow-100/50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-yellow-900 uppercase tracking-wider">
                                             User
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-yellow-900 uppercase tracking-wider">
                                             Role
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-yellow-900 uppercase tracking-wider">
+                                            Registered
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Last Login
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-yellow-900 uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {users.map((user) => (
-                                        <tr key={user.id} className="hover:bg-gray-50">
+                                <tbody className="bg-white divide-y divide-yellow-200">
+                                    {pendingUsers.map((user) => (
+                                        <tr key={user.id} className="hover:bg-yellow-50/50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10">
-                                                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                                            <span className="text-sm font-medium text-gray-700">
+                                                    <div className="flex-shrink-0 h-12 w-12">
+                                                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-sm">
+                                                            <span className="text-lg font-bold text-white">
                                                                 {user.name.charAt(0).toUpperCase()}
                                                             </span>
                                                         </div>
                                                     </div>
                                                     <div className="ml-4">
-                                                        <div className="text-sm font-medium text-gray-900">
+                                                        <div className="text-sm font-semibold text-slate-900">
                                                             {user.name}
                                                         </div>
-                                                        <div className="text-sm text-gray-500">
+                                                        <div className="text-sm text-slate-600">
                                                             {user.email}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getRoleColor(user.role)}`}>
                                                     {user.role}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <select
-                                                    value={user.status}
-                                                    onChange={(e) => handleUpdateUserStatus(user.id, e.target.value)}
-                                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border-0 ${getStatusColor(user.status)}`}
-                                                >
-                                                    <option value="active">Active</option>
-                                                    <option value="pending">Pending</option>
-                                                    <option value="inactive">Inactive</option>
-                                                    <option value="suspended">Suspended</option>
-                                                </select>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                {new Date(user.created_at).toLocaleDateString()}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                                                 <button
-                                                    onClick={() => handleDeleteUser(user.id)}
-                                                    className="text-red-600 hover:text-red-900"
+                                                    onClick={() => handleApproveUser(user.id)}
+                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                                                 >
-                                                    Delete
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRejectUser(user.id)}
+                                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                                >
+                                                    Reject
                                                 </button>
                                             </td>
                                         </tr>
@@ -370,97 +321,193 @@ export default function UsersPage() {
                             </table>
                         </div>
                     </div>
+                )}
 
-                    {/* Create User Modal */}
-                    {showCreateForm && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-lg max-w-md w-full p-6">
-                                <h3 className="text-lg font-semibold mb-4">Create New User</h3>
-
-                                {error && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                                        <p className="text-sm text-red-600">{error}</p>
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleCreateUser} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="name">Full Name</Label>
-                                        <Input
-                                            id="name"
-                                            value={createFormData.name}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
-                                            placeholder="John Doe"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="email">Email</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={createFormData.email}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
-                                            placeholder="john@example.com"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="password">Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            value={createFormData.password}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
-                                            placeholder="Enter password"
-                                            required
-                                            minLength={6}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="role">Role</Label>
-                                        <select
-                                            id="role"
-                                            value={createFormData.role}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, role: e.target.value as any })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="viewer">Viewer</option>
-                                            <option value="author">Author</option>
-                                            <option value="editor">Editor</option>
-                                            <option value="admin">Admin</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="flex gap-3 pt-4">
-                                        <Button
-                                            type="submit"
-                                            disabled={createLoading}
-                                            className="flex-1"
-                                        >
-                                            {createLoading ? "Creating..." : "Create User"}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setShowCreateForm(false)}
-                                            className="flex-1"
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </form>
-                            </div>
+                {/* All Users Table */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="px-6 py-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-slate-900">All Users ({users.length})</h2>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-slate-50">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                        User
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                        Role
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                        Last Login
+                                    </th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-100">
+                                {users.map((user) => (
+                                    <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-12 w-12">
+                                                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center shadow-sm">
+                                                        <span className="text-lg font-bold text-white">
+                                                            {user.name.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-semibold text-slate-900">
+                                                        {user.name}
+                                                    </div>
+                                                    <div className="text-sm text-slate-600">
+                                                        {user.email}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getRoleColor(user.role)}`}>
+                                                {user.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <select
+                                                value={user.status}
+                                                onChange={(e) => handleUpdateUserStatus(user.id, e.target.value)}
+                                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${getStatusColor(user.status)}`}
+                                            >
+                                                <option value="active">Active</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="inactive">Inactive</option>
+                                                <option value="suspended">Suspended</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                            {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                {/* Create User Modal */}
+                {showCreateForm && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-slate-900">Create New User</h3>
+                                <button
+                                    onClick={() => setShowCreateForm(false)}
+                                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
+                                    <p className="text-sm text-red-600 font-medium">{error}</p>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleCreateUser} className="space-y-5">
+                                <div>
+                                    <Label htmlFor="name" className="text-sm font-semibold text-slate-700 mb-2 block">Full Name</Label>
+                                    <Input
+                                        id="name"
+                                        value={createFormData.name}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                                        placeholder="John Doe"
+                                        required
+                                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700 mb-2 block">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={createFormData.email}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                                        placeholder="john@example.com"
+                                        required
+                                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="password" className="text-sm font-semibold text-slate-700 mb-2 block">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={createFormData.password}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                                        placeholder="Enter password"
+                                        required
+                                        minLength={6}
+                                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="role" className="text-sm font-semibold text-slate-700 mb-2 block">Role</Label>
+                                    <select
+                                        id="role"
+                                        value={createFormData.role}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, role: e.target.value as any })}
+                                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="viewer">Viewer</option>
+                                        <option value="author">Author</option>
+                                        <option value="editor">Editor</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <Button
+                                        type="submit"
+                                        disabled={createLoading}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        {createLoading ? "Creating..." : "Create User"}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowCreateForm(false)}
+                                        className="flex-1 border-slate-300"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
-
-
-

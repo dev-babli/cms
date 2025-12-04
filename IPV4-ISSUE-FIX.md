@@ -48,3 +48,4 @@ The Supabase dashboard shows:
 
 **Click "Pooler settings" to get the correct connection string!**
 
+

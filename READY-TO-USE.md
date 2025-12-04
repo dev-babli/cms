@@ -108,3 +108,4 @@ The CMS should be starting at: http://localhost:3001
 
 **Your CMS is now using Supabase and ready to use!** 🚀
 
+

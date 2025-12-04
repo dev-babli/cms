@@ -23,3 +23,4 @@ postgresql://postgres.ozxrtdqbcfinrnrdelql:soumeet2006@aws-1-ap-south-1.pooler.s
 
 After redeploy, try creating a blog post. It should work now.
 
+

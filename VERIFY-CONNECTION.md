@@ -67,3 +67,4 @@ postgresql://postgres.ozxrtdqbcfinrnrdelql:soumeet%40132006@aws-0-[REGION].poole
 
 **Once you have the correct connection string, update `.env.local` and test again!**
 
+

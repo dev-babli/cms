@@ -90,3 +90,4 @@ After fixing the issue:
 4. Verify Supabase Auth is enabled
 5. Test Supabase connection: `node scripts/test-supabase-connection.js`
 
+

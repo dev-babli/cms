@@ -58,15 +58,59 @@ export default async function AdminDashboard() {
       count: 0,
     },
     {
-      title: "Pages",
-      description: "Static pages & content",
-      href: "/admin/pages",
+      title: "eBooks",
+      description: "Lead magnet eBooks",
+      href: "/admin/ebooks",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      count: 0,
+    },
+    {
+      title: "Case Studies",
+      description: "Client success stories",
+      href: "/admin/case-studies",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      count: 0,
+    },
+    {
+      title: "Whitepapers",
+      description: "Research & insights",
+      href: "/admin/whitepapers",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      count: 4,
+      count: 0,
+    },
+    {
+      title: "Categories",
+      description: "Content categories",
+      href: "/admin/categories",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ),
+      count: 0,
+    },
+    {
+      title: "Leads",
+      description: "Captured leads & exports",
+      href: "/admin/leads",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      count: 0,
     },
     {
       title: "User Management",
@@ -83,23 +127,24 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Clean Header */}
-      <header className="border-b bg-white sticky top-0 z-50">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
+      {/* Premium Header with Enhanced Glass Morphism */}
+      <header className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">Intellectt CMS</h1>
-              <p className="text-xs text-muted-foreground">Content Management System</p>
+              <h1 className="text-2xl font-bold gradient-text">Intellectt CMS</h1>
+              <p className="text-sm text-slate-600 font-medium">Content Management System</p>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Intellectt CMS
-              </span>
+              <div className="text-right">
+                <p className="text-sm font-medium text-slate-900">{user.name}</p>
+                <p className="text-xs text-slate-600 capitalize">{user.role}</p>
+              </div>
               <form action="/api/auth/logout" method="POST">
                 <button 
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
                 >
                   Logout
                 </button>
@@ -109,63 +154,99 @@ export default async function AdminDashboard() {
         </div>
       </header>
 
-      <div className="px-6 py-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Welcome */}
-          <FadeIn>
-            <div className="mb-12">
-              <h2 className="text-4xl font-semibold tracking-tight mb-2">
-                Welcome back, {user.name}
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Manage your content and publish updates • Logged in as <span className="font-medium">{user.role}</span>
-              </p>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Premium Welcome Section */}
+        <FadeIn>
+          <div className="mb-12">
+            <div className="inline-block mb-4">
+              <span className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-semibold border border-blue-200/50">
+                👋 Welcome Back
+              </span>
             </div>
-          </FadeIn>
+            <h2 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+              Welcome back, {user.name}
+            </h2>
+            <p className="text-xl text-slate-600 font-medium">
+              Manage your content and publish updates • <span className="px-3 py-1 bg-slate-100 rounded-lg text-slate-900 font-semibold capitalize">{user.role}</span>
+            </p>
+          </div>
+        </FadeIn>
 
-          {/* Quick Actions */}
-          <FadeIn delay={0.1}>
-            <div className="mb-12">
-              <div className="flex items-center gap-3">
-                <Link href="/admin/blog/new">
-                  <button className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-                    New Blog Post
-                  </button>
-                </Link>
-                <Link href="/admin/services/new">
-                  <button className="px-5 py-2.5 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors border">
-                    New Service
-                  </button>
-                </Link>
-              </div>
-            </div>
-          </FadeIn>
+        {/* Quick Actions */}
+        <FadeIn delay={0.1}>
+          <div className="mb-12 flex flex-wrap items-center gap-3">
+            <Link href="/admin/blog/new">
+              <button className="btn-premium flex items-center gap-2 group">
+                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Blog Post
+              </button>
+            </Link>
+            <Link href="/admin/services/new">
+              <button className="px-6 py-3 bg-white text-slate-700 rounded-xl text-sm font-semibold hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-300 shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg flex items-center gap-2 group">
+                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Service
+              </button>
+            </Link>
+            <Link href="/admin/ebooks/new">
+              <button className="px-6 py-3 bg-white text-slate-700 rounded-xl text-sm font-semibold hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-300 shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg flex items-center gap-2 group">
+                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New eBook
+              </button>
+            </Link>
+          </div>
+        </FadeIn>
 
-          {/* Content Types Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {contentTypes.map((type, index) => (
-              <FadeIn key={type.href} delay={0.15 + index * 0.05}>
-                <Link href={type.href}>
-                  <div className="group premium-card p-6 cursor-pointer hover:border-primary/20">
+        {/* Content Types Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {contentTypes.map((type, index) => (
+            <FadeIn key={type.href} delay={0.15 + index * 0.05}>
+              <Link href={type.href}>
+                <div className="group premium-card-gradient p-6 cursor-pointer hover-lift relative overflow-hidden">
+                  {/* Animated Background Gradient on Hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-500 rounded-2xl"></div>
+                  
+                  <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="p-2 bg-muted rounded-lg text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl text-white group-hover:from-blue-600 group-hover:to-indigo-700 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-blue-500/30">
                         {type.icon}
                       </div>
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {type.count}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-3xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                          {type.count}
+                        </span>
+                        <p className="text-xs text-slate-500 font-medium">Items</p>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">
+                    <h3 className="text-xl font-bold mb-2 text-slate-900 group-hover:text-blue-600 transition-colors duration-300">
                       {type.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
                       {type.description}
                     </p>
+                    {type.adminOnly && (
+                      <span className="inline-block mt-3 px-3 py-1 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 text-xs font-bold rounded-full border border-red-200/50 shadow-sm">
+                        🔒 Admin Only
+                      </span>
+                    )}
+                    
+                    {/* Arrow indicator */}
+                    <div className="mt-4 flex items-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="text-sm font-semibold">View All</span>
+                      <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
-                </Link>
-              </FadeIn>
-            ))}
-          </div>
+                </div>
+              </Link>
+            </FadeIn>
+          ))}
         </div>
       </div>
     </div>

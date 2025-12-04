@@ -115,3 +115,4 @@ node scripts/test-db-connection.js
 ### Issue: Using direct connection instead of pooler
 **Fix**: Use pooler (port 5432) for Vercel serverless functions
 
+

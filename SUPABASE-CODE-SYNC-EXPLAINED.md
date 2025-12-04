@@ -170,3 +170,4 @@ ALTER TABLE users ALTER COLUMN status TYPE VARCHAR(20);
 
 **Everything is ready! Just push to Git and deploy.** 🚀
 
+

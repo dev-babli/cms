@@ -60,3 +60,4 @@ Supabase (and most PostgreSQL hosts) terminate idle database connections after a
 
 **The registration should work now!** 🚀
 
+

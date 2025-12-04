@@ -103,3 +103,4 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 3. **Features**: Built-in password reset, email verification, OAuth providers
 4. **Reliability**: Supabase Auth is battle-tested and maintained
 
+

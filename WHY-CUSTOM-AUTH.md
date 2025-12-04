@@ -230,3 +230,4 @@ Would you like to:
 2. 🔄 Switch to Supabase Auth
 3. 🔀 Hybrid approach
 
+

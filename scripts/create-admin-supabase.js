@@ -151,3 +151,4 @@ async function linkUserToDatabase(supabaseUserId, email) {
 
 createAdminInSupabase();
 
+

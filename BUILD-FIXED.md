@@ -31,3 +31,4 @@ The CMS is now ready to run. The warning about dynamic server usage is **expecte
 2. Login with: `admin@emscale.com` / `admin123`
 3. Create test content to verify database connection
 
+

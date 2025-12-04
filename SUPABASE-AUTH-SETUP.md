@@ -116,3 +116,4 @@ If you have existing users, you'll need to:
 
 **Your CMS is now using Supabase Auth for better security!** 🔐
 
+

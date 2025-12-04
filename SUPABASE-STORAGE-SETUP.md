@@ -122,3 +122,4 @@ If you were using local file storage before:
 2. You can manually upload them to Supabase Storage if needed
 3. New uploads will automatically use Supabase Storage
 
+

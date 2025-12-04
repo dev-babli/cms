@@ -98,3 +98,4 @@ I'll update the code to use **Service Role Key** for API routes (more secure).
 
 **You're absolutely right to question this!** Service Role Key is more appropriate for server-side API routes. 🔐
 
+

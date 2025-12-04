@@ -42,8 +42,15 @@ function getConnectionConfig() {
 }
 
 // Create connection pool
-const poolConfig = getConnectionConfig();
-const pool = new Pool(poolConfig);
+let pool: Pool;
+try {
+  const poolConfig = getConnectionConfig();
+  pool = new Pool(poolConfig);
+} catch (error: any) {
+  console.error('❌ Failed to initialize database pool:', error.message);
+  // Will be re-initialized on first query if DATABASE_URL becomes available
+  throw error;
+}
 
 // Test connection
 pool.on('connect', (client) => {
@@ -67,6 +74,24 @@ pool.on('error', (err) => {
 // Helper function to execute queries with retry logic
 export const query = async (text: string, params?: any[], retries = 3): Promise<any> => {
   const start = Date.now();
+  
+  // Check if DATABASE_URL is set
+  if (!process.env.DATABASE_URL) {
+    const error = new Error('DATABASE_URL environment variable is not set. Please configure your database connection.');
+    console.error('❌ Database Configuration Error:', error.message);
+    throw error;
+  }
+  
+  // Initialize pool if not already initialized
+  if (!pool) {
+    try {
+      const poolConfig = getConnectionConfig();
+      pool = new Pool(poolConfig);
+    } catch (error: any) {
+      console.error('❌ Failed to create database pool:', error.message);
+      throw new Error(`Database connection failed: ${error.message}`);
+    }
+  }
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -96,32 +121,56 @@ export const query = async (text: string, params?: any[], retries = 3): Promise<
         continue;
       }
       
+      // Enhanced error logging
+      const errorMessage = error?.message || 'Unknown database error';
+      const errorCode = error?.code || 'UNKNOWN';
+      const errorDetail = error?.detail || '';
+      const errorHint = error?.hint || '';
+      
       // Enhanced error logging for authentication issues
-      if (error.message?.includes('password authentication failed')) {
+      if (errorMessage.includes('password authentication failed')) {
         console.error('❌ Database Authentication Failed!');
-        console.error('   Error:', error.message);
+        console.error('   Error:', errorMessage);
         console.error('   💡 Check DATABASE_URL in Vercel environment variables');
         console.error('   💡 Verify password is correct');
         console.error('   💡 Connection string format: postgresql://postgres.xxx:password@host:port/db');
       }
       
-      // Log and throw the error
+      // Check for table not found errors
+      if (errorMessage.includes('does not exist') || errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+        console.error('❌ Database Table Not Found!');
+        console.error('   Error:', errorMessage);
+        console.error('   💡 The database tables may not be initialized');
+        console.error('   💡 Run database migrations or initialization scripts');
+      }
+      
+      // Log and throw the error with full details
       const connectionString = process.env.DATABASE_URL || '';
       const maskedConnection = connectionString.replace(/:([^@]+)@/, ':****@');
+      
       console.error('Query error', { 
-        text: text.substring(0, 100), 
-        error: error.message,
-        code: error.code,
+        text: text.substring(0, 200), 
+        error: errorMessage,
+        code: errorCode,
+        detail: errorDetail,
+        hint: errorHint,
         attempt: attempt + 1,
-        connectionString: maskedConnection
+        connectionString: maskedConnection,
+        fullError: process.env.NODE_ENV === 'development' ? error : undefined
       });
       
       // Provide more helpful error messages
-      if (error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
-        throw new Error(`Database connection timeout. Please check your DATABASE_URL and network connection. If using Supabase, try the pooler connection (port 6543). Original error: ${error.message}`);
+      if (errorMessage.includes('timeout') || errorCode === 'ETIMEDOUT') {
+        throw new Error(`Database connection timeout. Please check your DATABASE_URL and network connection. If using Supabase, try the pooler connection (port 6543). Original error: ${errorMessage}`);
       }
       
-      throw error;
+      // Create a more descriptive error
+      const descriptiveError = new Error(
+        `Database query failed: ${errorMessage}${errorDetail ? ` (${errorDetail})` : ''}${errorHint ? `. Hint: ${errorHint}` : ''}`
+      );
+      (descriptiveError as any).code = errorCode;
+      (descriptiveError as any).originalError = error;
+      throw descriptiveError;
     }
   }
   

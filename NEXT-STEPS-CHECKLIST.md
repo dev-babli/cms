@@ -156,3 +156,4 @@ CREATE INDEX IF NOT EXISTS idx_users_supabase_id ON users(supabase_user_id);
 
 **Start with Step 1: Get Service Role Key!** 🔐
 
+

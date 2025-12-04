@@ -46,3 +46,4 @@ The pooled connection string will have:
 
 **Once you find it, copy the "Session mode" connection string!**
 
+

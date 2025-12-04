@@ -154,3 +154,4 @@ WHERE email = 'admin@emscale.com';
 
 **Most likely issue:** Admin user not in Supabase Auth. Create it in Supabase Dashboard first!
 
+

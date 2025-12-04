@@ -58,3 +58,4 @@ The registration flow will:
 
 **Run the SQL above and try registration again!** 🚀
 
+

@@ -87,3 +87,4 @@ postgresql://postgres.ozxrtdqbcfinrnrdelql:soumeet%40132006@aws-0-us-east-1.pool
 
 **The pooled connection is REQUIRED for Node.js/serverless applications!**
 
+

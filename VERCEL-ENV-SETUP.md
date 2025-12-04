@@ -119,3 +119,4 @@ After deployment, you can verify variables are loaded by checking:
 
 **Once you add these variables and redeploy, login should work!** ✅
 
+

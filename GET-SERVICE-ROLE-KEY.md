@@ -92,3 +92,4 @@ The **Service Role Key** should **NEVER** be public. It's for server-side use on
 
 **Get your Service Role Key and add it to environment variables!** 🔐
 
+

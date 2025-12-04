@@ -66,3 +66,4 @@ DATABASE_URL=postgresql://postgres:your-password@db.ozxrtdqbcfinrnrdelql.supabas
 
 **Once you have the connection string, let me know and I'll proceed with the migration!** 🚀
 
+

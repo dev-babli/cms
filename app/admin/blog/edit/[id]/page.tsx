@@ -20,6 +20,8 @@ export default function EditBlogPost({ params }: PageProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [userRole, setUserRole] = useState<string>('viewer');
+    const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         title: "",
         slug: "",
@@ -33,8 +35,21 @@ export default function EditBlogPost({ params }: PageProps) {
     });
 
     useEffect(() => {
+        fetchUserRole();
         fetchPost();
     }, []);
+
+    const fetchUserRole = async () => {
+        try {
+            const res = await fetch("/api/auth/me");
+            const data = await res.json();
+            if (data.success && data.data?.user) {
+                setUserRole(data.data.user.role || 'viewer');
+            }
+        } catch (error) {
+            console.error("Failed to fetch user role:", error);
+        }
+    };
 
     const fetchPost = async () => {
         try {
@@ -47,6 +62,30 @@ export default function EditBlogPost({ params }: PageProps) {
             alert("Failed to load post");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSubmitForReview = async () => {
+        if (!confirm("Submit this post for editor/admin review?")) return;
+
+        setSubmitting(true);
+        try {
+            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}/submit-review`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(data.message || "Post submitted for review successfully!");
+                router.push("/admin/blog");
+            } else {
+                alert(data.error || "Failed to submit for review");
+            }
+        } catch (error) {
+            alert("Error submitting for review");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -205,18 +244,21 @@ export default function EditBlogPost({ params }: PageProps) {
                                 />
                             </div>
 
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="published"
-                                    checked={formData.published}
-                                    onCheckedChange={(checked) =>
-                                        setFormData({ ...formData, published: !!checked })
-                                    }
-                                />
-                                <Label htmlFor="published" className="cursor-pointer">
-                                    Published
-                                </Label>
-                            </div>
+                            {/* Publish checkbox - only show for editors and admins */}
+                            {(userRole === 'editor' || userRole === 'admin') && (
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="published"
+                                        checked={formData.published}
+                                        onCheckedChange={(checked) =>
+                                            setFormData({ ...formData, published: !!checked })
+                                        }
+                                    />
+                                    <Label htmlFor="published" className="cursor-pointer">
+                                        Published
+                                    </Label>
+                                </div>
+                            )}
 
                             <div className="flex items-center gap-4 pt-6 border-t">
                                 <Button
@@ -227,6 +269,20 @@ export default function EditBlogPost({ params }: PageProps) {
                                 >
                                     {saving ? "Saving..." : "Save Changes"}
                                 </Button>
+
+                                {/* Submit for Review button - only for authors */}
+                                {userRole === 'author' && (
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        disabled={submitting}
+                                        onClick={handleSubmitForReview}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        {submitting ? "Submitting..." : "Submit for Review"}
+                                    </Button>
+                                )}
+
                                 <Link href="/admin/blog">
                                     <Button type="button" variant="outline" size="lg">
                                         Cancel

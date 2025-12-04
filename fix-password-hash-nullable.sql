@@ -8,3 +8,4 @@ ALTER COLUMN password_hash DROP NOT NULL;
 -- Add a comment explaining why it's nullable
 COMMENT ON COLUMN users.password_hash IS 'Nullable for users authenticated via Supabase Auth. Only used for legacy users or custom auth.';
 
+

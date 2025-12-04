@@ -79,3 +79,4 @@ If you want to use the Supabase client with your API key, I can:
 
 **But if you want simpler setup**, we can use the API key approach!
 
+

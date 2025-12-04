@@ -135,3 +135,4 @@ Your CMS now has **admin-only approval** for new user registrations.
 
 New users must wait for admin approval before they can access the CMS.
 
+

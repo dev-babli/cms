@@ -97,3 +97,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-key-here
 
 **No special "mark as private" button needed!** Just don't use `NEXT_PUBLIC_` prefix. ✅
 
+

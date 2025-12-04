@@ -4,8 +4,11 @@
     "app/api/**/*.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/publish-scheduled",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
-
-
-

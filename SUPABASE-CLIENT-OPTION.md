@@ -60,3 +60,4 @@ The connection failed. Try this:
 1. Fix connection string (use pooled connection) ← **Recommended**
 2. Switch to Supabase client with API key
 
+

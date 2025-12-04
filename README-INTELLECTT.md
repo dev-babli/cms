@@ -246,3 +246,4 @@ The CMS uses SQLite by default (file: `content.db`). Tables include:
 
 **Intellectt CMS** - Powering the Intellectt website with modern content management.
 
+
