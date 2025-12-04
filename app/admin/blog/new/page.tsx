@@ -67,7 +67,8 @@ export default function NewBlogPost() {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data) {
-                    const uniqueAuthors: string[] = [...new Set(data.data.map((p: any) => p.author).filter((a: any): a is string => typeof a === 'string' && Boolean(a)))];
+                    const authors = data.data.map((p: any) => p.author).filter((a: any): a is string => typeof a === 'string' && Boolean(a));
+                    const uniqueAuthors: string[] = Array.from(new Set(authors));
                     setAuthors(uniqueAuthors);
                 }
             })
@@ -78,14 +79,15 @@ export default function NewBlogPost() {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data) {
-                    const allTags: string[] = data.data
+                    const tagStrings = data.data
                         .map((p: any) => p.tags)
-                        .filter((t: any): t is string => typeof t === 'string' && Boolean(t))
+                        .filter((t: any): t is string => typeof t === 'string' && Boolean(t));
+                    const allTags: string[] = tagStrings
                         .join(',')
                         .split(',')
                         .map((t: string) => t.trim())
-                        .filter(Boolean);
-                    const uniqueTags: string[] = [...new Set(allTags)];
+                        .filter((t: string): t is string => Boolean(t));
+                    const uniqueTags: string[] = Array.from(new Set(allTags));
                     setExistingTags(uniqueTags);
                 }
             })
