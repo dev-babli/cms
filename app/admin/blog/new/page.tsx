@@ -25,6 +25,16 @@ export default function NewBlogPost() {
         category: "",
         tags: "",
         published: true, // Default to published so posts show up immediately
+        // SEO Fields
+        meta_title: "",
+        meta_description: "",
+        meta_keywords: "",
+        canonical_url: "",
+        og_title: "",
+        og_description: "",
+        og_image: "",
+        og_type: "article",
+        schema_markup: "",
     });
 
     useEffect(() => {
@@ -395,6 +405,112 @@ export default function NewBlogPost() {
                                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                                     placeholder="ai, machine-learning, technology"
                                 />
+                            </div>
+                        </div>
+
+                        {/* SEO Settings */}
+                        <div className="pt-8 border-t space-y-6">
+                            <h3 className="text-sm font-semibold">SEO Settings</h3>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="meta_title">Meta Title</Label>
+                                    <Input
+                                        id="meta_title"
+                                        value={formData.meta_title}
+                                        onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
+                                        placeholder="SEO page title (defaults to post title if empty)"
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="meta_description">Meta Description</Label>
+                                    <Textarea
+                                        id="meta_description"
+                                        value={formData.meta_description}
+                                        onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
+                                        placeholder="SEO meta description (defaults to excerpt if empty)"
+                                        rows={3}
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="meta_keywords">Meta Keywords</Label>
+                                    <Input
+                                        id="meta_keywords"
+                                        value={formData.meta_keywords}
+                                        onChange={(e) => setFormData({ ...formData, meta_keywords: e.target.value })}
+                                        placeholder="keyword1, keyword2, keyword3"
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="canonical_url">Canonical URL</Label>
+                                    <Input
+                                        id="canonical_url"
+                                        value={formData.canonical_url}
+                                        onChange={(e) => setFormData({ ...formData, canonical_url: e.target.value })}
+                                        placeholder="https://yourdomain.com/blog/post-slug"
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div className="pt-4 border-t">
+                                    <h4 className="text-sm font-semibold mb-4">Open Graph (Social Sharing)</h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="og_title">OG Title</Label>
+                                            <Input
+                                                id="og_title"
+                                                value={formData.og_title}
+                                                onChange={(e) => setFormData({ ...formData, og_title: e.target.value })}
+                                                placeholder="Social sharing title"
+                                                className="mt-2"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="og_description">OG Description</Label>
+                                            <Textarea
+                                                id="og_description"
+                                                value={formData.og_description}
+                                                onChange={(e) => setFormData({ ...formData, og_description: e.target.value })}
+                                                placeholder="Social sharing description"
+                                                rows={2}
+                                                className="mt-2"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="og_image">OG Image URL</Label>
+                                            <Input
+                                                id="og_image"
+                                                value={formData.og_image}
+                                                onChange={(e) => setFormData({ ...formData, og_image: e.target.value })}
+                                                placeholder="https://yourdomain.com/image.jpg"
+                                                className="mt-2"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t">
+                                    <Label htmlFor="schema_markup">Schema Markup (JSON-LD)</Label>
+                                    <Textarea
+                                        id="schema_markup"
+                                        value={formData.schema_markup}
+                                        onChange={(e) => setFormData({ ...formData, schema_markup: e.target.value })}
+                                        placeholder='{"@context":"https://schema.org","@type":"BlogPosting",...}'
+                                        rows={6}
+                                        className="mt-2 font-mono text-xs"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Optional: Add custom JSON-LD structured data for enhanced SEO
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

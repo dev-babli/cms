@@ -29,14 +29,37 @@ export const blogPosts = {
   
   create: async (post: Omit<BlogPost, 'id'> | any) => {
     const stmt = db.prepare(`
-      INSERT INTO blog_posts (slug, title, excerpt, content, author, featured_image, category, tags, published, publish_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO blog_posts (
+        slug, title, excerpt, content, author, featured_image, category, tags, 
+        published, publish_date, scheduled_publish_date,
+        meta_title, meta_description, meta_keywords, canonical_url,
+        og_title, og_description, og_image, og_type, schema_markup
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `);
     return await stmt.run(
-      post.slug, post.title, post.excerpt || '', post.content || '', 
-      post.author || '', post.featured_image || '', post.category || '', 
-      post.tags || '', post.published || false, post.publish_date || new Date().toISOString()
+      post.slug, 
+      post.title, 
+      post.excerpt || '', 
+      post.content || '', 
+      post.author || '', 
+      post.featured_image || '', 
+      post.category || '', 
+      post.tags || '', 
+      post.published || false, 
+      post.publish_date || new Date().toISOString(),
+      post.scheduled_publish_date || null,
+      // SEO Fields
+      post.meta_title || null,
+      post.meta_description || null,
+      post.meta_keywords || null,
+      post.canonical_url || null,
+      post.og_title || null,
+      post.og_description || null,
+      post.og_image || null,
+      post.og_type || 'article',
+      post.schema_markup || null
     );
   },
   

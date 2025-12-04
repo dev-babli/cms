@@ -13,6 +13,18 @@ export const BlogPostSchema = z.object({
   tags: z.string().optional(),
   published: z.boolean().default(false),
   publish_date: z.string().optional(),
+  scheduled_publish_date: z.string().optional(),
+  // SEO Fields
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  meta_keywords: z.string().optional(),
+  canonical_url: z.string().optional(),
+  og_title: z.string().optional(),
+  og_description: z.string().optional(),
+  og_image: z.string().optional(),
+  og_type: z.string().optional(),
+  schema_markup: z.string().optional(),
+  custom_tracking_script: z.string().optional(),
 });
 
 export type BlogPost = z.infer<typeof BlogPostSchema>;
