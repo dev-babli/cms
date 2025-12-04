@@ -274,21 +274,21 @@ export default function NewCaseStudy() {
                             <div>
                                 <Label htmlFor="challenge">Challenge</Label>
                                 <RichTextEditor
-                                    value={formData.challenge}
+                                    content={formData.challenge}
                                     onChange={(content) => setFormData({ ...formData, challenge: content })}
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="solution">Solution</Label>
                                 <RichTextEditor
-                                    value={formData.solution}
+                                    content={formData.solution}
                                     onChange={(content) => setFormData({ ...formData, solution: content })}
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="results">Results</Label>
                                 <RichTextEditor
-                                    value={formData.results}
+                                    content={formData.results}
                                     onChange={(content) => setFormData({ ...formData, results: content })}
                                 />
                             </div>
@@ -305,7 +305,7 @@ export default function NewCaseStudy() {
                             <div>
                                 <Label htmlFor="content">Full Content (WYSIWYG)</Label>
                                 <RichTextEditor
-                                    value={formData.content}
+                                    content={formData.content}
                                     onChange={(content) => setFormData({ ...formData, content })}
                                 />
                             </div>

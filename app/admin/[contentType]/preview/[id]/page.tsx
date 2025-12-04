@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+// Loading spinner component - using simple div instead
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
+import { sanitizeArticleContent, sanitizeTitle, stripHtml } from "@/lib/utils/sanitize";
 
 type ContentType = "blog" | "ebook" | "case-study" | "whitepaper";
 
@@ -53,12 +59,7 @@ export default function ContentPreviewPage() {
     }
   };
 
-  const stripHtml = (html: string) => {
-    if (!html) return "";
-    const tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
+  // stripHtml is now imported from utils/sanitize (safe implementation)
 
   if (loading) {
     return (
@@ -117,7 +118,7 @@ export default function ContentPreviewPage() {
         <div className="mb-8">
           <h1
             className="text-4xl font-bold text-slate-900 mb-4"
-            dangerouslySetInnerHTML={{ __html: content.title }}
+            dangerouslySetInnerHTML={{ __html: sanitizeTitle(content.title) }}
           />
           {content.excerpt && (
             <p className="text-xl text-slate-600 leading-relaxed">
@@ -142,7 +143,7 @@ export default function ContentPreviewPage() {
         {content.content && (
           <div
             className="prose prose-lg max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: content.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.content) }}
           />
         )}
 
@@ -150,7 +151,7 @@ export default function ContentPreviewPage() {
         {content.description && (
           <div
             className="prose prose-lg max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: content.description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.description) }}
           />
         )}
 
@@ -160,19 +161,19 @@ export default function ContentPreviewPage() {
             {content.challenge && (
               <div className="bg-red-50 border-l-4 border-red-500 p-6 mb-6">
                 <h2 className="text-2xl font-bold text-red-900 mb-3">Challenge</h2>
-                <div dangerouslySetInnerHTML={{ __html: content.challenge }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.challenge) }} />
               </div>
             )}
             {content.solution && (
               <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-6">
                 <h2 className="text-2xl font-bold text-blue-900 mb-3">Solution</h2>
-                <div dangerouslySetInnerHTML={{ __html: content.solution }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.solution) }} />
               </div>
             )}
             {content.results && (
               <div className="bg-green-50 border-l-4 border-green-500 p-6 mb-6">
                 <h2 className="text-2xl font-bold text-green-900 mb-3">Results</h2>
-                <div dangerouslySetInnerHTML={{ __html: content.results }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.results) }} />
               </div>
             )}
           </>

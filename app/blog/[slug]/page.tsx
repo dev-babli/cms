@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { blogPosts } from '@/lib/cms/api';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { sanitizeArticleContent } from '@/lib/utils/sanitize';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -164,7 +165,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             [&_.lead]:text-xl [&_.lead]:font-light [&_.lead]:text-slate-600 [&_.lead]:leading-relaxed
             [&_div[style*='background']]:rounded-xl [&_div[style*='background']]:shadow-lg
             [&_div[style*='border']]:rounded-lg"
-          dangerouslySetInnerHTML={{ __html: post.content || '' }}
+          dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(post.content || '') }}
         />
 
         {/* Tags Section */}

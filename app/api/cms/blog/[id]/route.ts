@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blogPosts } from '@/lib/cms/api';
 import { BlogPostSchema } from '@/lib/cms/types';
+import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,7 +75,27 @@ export async function PUT(
     const body = await request.json();
     const validated = BlogPostSchema.partial().parse(body);
     
-    const result = await blogPosts.update(id, validated);
+    // SECURITY: Sanitize HTML content before updating
+    const sanitized: any = {};
+    if (validated.title !== undefined) sanitized.title = sanitizeTitle(validated.title);
+    if (validated.excerpt !== undefined) sanitized.excerpt = sanitizeArticleContent(validated.excerpt);
+    if (validated.content !== undefined) sanitized.content = sanitizeArticleContent(validated.content);
+    
+    // Note: custom_tracking_script is not in BlogPostSchema, but if it exists in body, sanitize it
+    if ((body as any).custom_tracking_script !== undefined) {
+      sanitized.custom_tracking_script = (body as any).custom_tracking_script 
+        ? sanitizeTrackingScript((body as any).custom_tracking_script) 
+        : undefined;
+    }
+    
+    // Copy other fields that don't need sanitization
+    Object.keys(validated).forEach(key => {
+      if (!['title', 'excerpt', 'content'].includes(key)) {
+        sanitized[key] = (validated as any)[key];
+      }
+    });
+    
+    const result = await blogPosts.update(id, sanitized);
     return NextResponse.json(
       { success: true, data: result },
       { headers: corsHeaders }

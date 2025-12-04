@@ -3,10 +3,11 @@ import { whitepapers } from '@/lib/cms/api';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await whitepapers.incrementDownload(parseInt(params.id));
+    const { id } = await params;
+    await whitepapers.incrementDownload(parseInt(id));
     return NextResponse.json(
       { success: true },
       { headers: { 'Access-Control-Allow-Origin': '*' } }

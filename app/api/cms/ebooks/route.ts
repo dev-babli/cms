@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ebooks } from '@/lib/cms/api';
 import { EbookSchema } from '@/lib/cms/types';
 import { z } from 'zod';
+import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,14 +47,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = EbookSchema.parse(body);
     
-    if (!validated.slug && validated.title) {
-      validated.slug = validated.title
+    // SECURITY: Sanitize HTML content before storing
+    const sanitized = {
+      ...validated,
+      title: sanitizeTitle(validated.title),
+      excerpt: sanitizeArticleContent(validated.excerpt),
+      description: sanitizeArticleContent(validated.description),
+      content: sanitizeArticleContent(validated.content),
+      meta_title: sanitizeTitle(validated.meta_title),
+      meta_description: sanitizeArticleContent(validated.meta_description),
+      og_title: sanitizeTitle(validated.og_title),
+      og_description: sanitizeArticleContent(validated.og_description),
+      // Note: custom_tracking_script should ideally be disabled, but if it exists, sanitize it
+      custom_tracking_script: validated.custom_tracking_script 
+        ? sanitizeTrackingScript(validated.custom_tracking_script) 
+        : undefined,
+    };
+    
+    if (!sanitized.slug && sanitized.title) {
+      sanitized.slug = sanitizeTitle(sanitized.title)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
     }
     
-    const result = await ebooks.create(validated);
+    const result = await ebooks.create(sanitized);
     const newId = (result as any).row?.id || (result as any).lastInsertRowid;
     const createdItem = (result as any).row || { id: newId, ...validated };
     

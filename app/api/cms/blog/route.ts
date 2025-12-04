@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { blogPosts } from '@/lib/cms/api';
 import { BlogPostSchema } from '@/lib/cms/types';
 import { z } from 'zod';
+import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,20 +75,33 @@ export async function POST(request: NextRequest) {
     // Enhanced validation with better error handling
     const validated = BlogPostSchema.parse(body);
     
+    // SECURITY: Sanitize HTML content before storing
+    const sanitized: any = {
+      ...validated,
+      title: sanitizeTitle(validated.title),
+      excerpt: sanitizeArticleContent(validated.excerpt),
+      content: sanitizeArticleContent(validated.content),
+    };
+    
+    // Note: custom_tracking_script is not in BlogPostSchema, but if it exists in body, sanitize it
+    if ((body as any).custom_tracking_script) {
+      sanitized.custom_tracking_script = sanitizeTrackingScript((body as any).custom_tracking_script);
+    }
+    
     // Ensure slug is generated if missing
-    if (!validated.slug && validated.title) {
-      validated.slug = validated.title
+    if (!sanitized.slug && sanitized.title) {
+      sanitized.slug = sanitizeTitle(sanitized.title)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
     }
     
     // Set publish_date if not provided
-    if (!validated.publish_date) {
-      validated.publish_date = new Date().toISOString();
+    if (!sanitized.publish_date) {
+      sanitized.publish_date = new Date().toISOString();
     }
     
-    const result = await blogPosts.create(validated);
+    const result = await blogPosts.create(sanitized);
     console.log('Blog post created successfully:', result);
     
     // Get the ID from the result (PostgreSQL returns the inserted row with RETURNING *)

@@ -253,7 +253,7 @@ export default function EditEbook() {
                             <div>
                                 <Label htmlFor="content">Content (WYSIWYG)</Label>
                                 <RichTextEditor
-                                    value={formData.content}
+                                    content={formData.content}
                                     onChange={(content) => setFormData({ ...formData, content })}
                                 />
                             </div>

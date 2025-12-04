@@ -236,7 +236,7 @@ export default function EditWhitepaper() {
                             </div>
                             <div>
                                 <Label htmlFor="content">Content Summary (WYSIWYG)</Label>
-                                <RichTextEditor value={formData.content} onChange={(content) => setFormData({ ...formData, content })} />
+                                <RichTextEditor content={formData.content} onChange={(content) => setFormData({ ...formData, content })} />
                             </div>
                             <div>
                                 <Label htmlFor="author">Author</Label>

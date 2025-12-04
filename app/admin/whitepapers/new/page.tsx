@@ -254,7 +254,7 @@ export default function NewWhitepaper() {
                             <div>
                                 <Label htmlFor="content">Content Summary (WYSIWYG)</Label>
                                 <RichTextEditor
-                                    value={formData.content}
+                                    content={formData.content}
                                     onChange={(content) => setFormData({ ...formData, content })}
                                 />
                             </div>

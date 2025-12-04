@@ -259,15 +259,15 @@ export default function EditCaseStudy() {
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="challenge">Challenge</Label>
-                                <RichTextEditor value={formData.challenge} onChange={(content) => setFormData({ ...formData, challenge: content })} />
+                                <RichTextEditor content={formData.challenge} onChange={(content) => setFormData({ ...formData, challenge: content })} />
                             </div>
                             <div>
                                 <Label htmlFor="solution">Solution</Label>
-                                <RichTextEditor value={formData.solution} onChange={(content) => setFormData({ ...formData, solution: content })} />
+                                <RichTextEditor content={formData.solution} onChange={(content) => setFormData({ ...formData, solution: content })} />
                             </div>
                             <div>
                                 <Label htmlFor="results">Results</Label>
-                                <RichTextEditor value={formData.results} onChange={(content) => setFormData({ ...formData, results: content })} />
+                                <RichTextEditor content={formData.results} onChange={(content) => setFormData({ ...formData, results: content })} />
                             </div>
                             <div>
                                 <Label htmlFor="testimonial">Client Testimonial</Label>
@@ -275,7 +275,7 @@ export default function EditCaseStudy() {
                             </div>
                             <div>
                                 <Label htmlFor="content">Full Content (WYSIWYG)</Label>
-                                <RichTextEditor value={formData.content} onChange={(content) => setFormData({ ...formData, content })} />
+                                <RichTextEditor content={formData.content} onChange={(content) => setFormData({ ...formData, content })} />
                             </div>
                         </div>
                     </div>

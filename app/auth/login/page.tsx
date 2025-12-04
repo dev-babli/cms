@@ -89,7 +89,6 @@ export default function LoginPage() {
                 : "Network error. Please check your connection and try again.";
             setError(errorMessage);
             console.error("Login error:", error);
-        } finally {
             setLoading(false);
         }
     };

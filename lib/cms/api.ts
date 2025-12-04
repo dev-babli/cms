@@ -27,7 +27,7 @@ export const blogPosts = {
     }
   },
   
-  create: async (post: Omit<BlogPost, 'id'>) => {
+  create: async (post: Omit<BlogPost, 'id'> | any) => {
     const stmt = db.prepare(`
       INSERT INTO blog_posts (slug, title, excerpt, content, author, featured_image, category, tags, published, publish_date)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -13,7 +13,21 @@ export async function POST(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     // Authenticate with Supabase Auth only
-    const supabase = createServerClient();
+    let supabase;
+    try {
+      supabase = createServerClient();
+    } catch (configError: any) {
+      console.error('Supabase configuration error:', configError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: process.env.NODE_ENV === 'development' 
+            ? `Configuration error: ${configError.message}. Please check your .env.local file.`
+            : 'Server configuration error. Please contact support.'
+        },
+        { status: 500 }
+      );
+    }
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,

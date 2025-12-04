@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sanitizeArticleContent } from '@/lib/utils/sanitize';
 
 interface LivePreviewProps {
     content: any;
@@ -41,7 +42,7 @@ export function LivePreview({ content, schema }: LivePreviewProps) {
                         )}
                         <div
                             className="prose prose-lg max-w-none"
-                            dangerouslySetInnerHTML={{ __html: content.content || '<p>Start writing...</p>' }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.content || '<p>Start writing...</p>') }}
                         />
                         {content.author && (
                             <div className="mt-8 pt-6 border-t flex items-center gap-3">

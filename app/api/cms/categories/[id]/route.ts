@@ -5,10 +5,11 @@ import { z } from 'zod';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const item = await categories.getById(parseInt(params.id));
+    const { id } = await params;
+    const item = await categories.getById(parseInt(id));
     if (!item) {
       return NextResponse.json(
         { success: false, error: 'Category not found' },
@@ -29,12 +30,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const validated = CategorySchema.partial().parse(body);
-    const result = await categories.update(parseInt(params.id), validated);
+    const result = await categories.update(parseInt(id), validated);
     
     return NextResponse.json(
       { success: true, data: (result as any).row || result },
@@ -56,10 +58,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await categories.delete(parseInt(params.id));
+    const { id } = await params;
+    await categories.delete(parseInt(id));
     return NextResponse.json(
       { success: true },
       { headers: { 'Access-Control-Allow-Origin': '*' } }

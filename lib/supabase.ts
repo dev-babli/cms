@@ -27,16 +27,24 @@ export const createServerClient = () => {
   if (!supabaseUrl) {
     const errorMsg = process.env.NODE_ENV === 'production'
       ? 'Server configuration error. Please contact support.'
-      : 'SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL is not set!';
+      : 'SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL is not set! Please check your .env.local file.';
     console.error('❌', errorMsg);
+    // In development, provide helpful error message
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error('Supabase URL is not configured. Please set NEXT_PUBLIC_SUPABASE_URL in your .env.local file.');
+    }
     throw new Error('Supabase URL is not configured');
   }
   
   if (!key) {
     const errorMsg = process.env.NODE_ENV === 'production'
       ? 'Server configuration error. Please contact support.'
-      : 'Supabase key not found. Use SUPABASE_SERVICE_ROLE_KEY (recommended) or SUPABASE_ANON_KEY.';
+      : 'Supabase key not found. Please set SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.';
     console.error('❌', errorMsg);
+    // In development, provide helpful error message
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error('Supabase API key is not configured. Please set SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.');
+    }
     throw new Error('Supabase API key is not configured');
   }
   
