@@ -67,7 +67,7 @@ export default function NewBlogPost() {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data) {
-                    const uniqueAuthors = [...new Set(data.data.map((p: any) => p.author).filter(Boolean))];
+                    const uniqueAuthors: string[] = [...new Set(data.data.map((p: any) => p.author).filter((a: any): a is string => typeof a === 'string' && Boolean(a)))];
                     setAuthors(uniqueAuthors);
                 }
             })
@@ -78,14 +78,14 @@ export default function NewBlogPost() {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data) {
-                    const allTags = data.data
+                    const allTags: string[] = data.data
                         .map((p: any) => p.tags)
-                        .filter(Boolean)
+                        .filter((t: any): t is string => typeof t === 'string' && Boolean(t))
                         .join(',')
                         .split(',')
                         .map((t: string) => t.trim())
                         .filter(Boolean);
-                    const uniqueTags = [...new Set(allTags)];
+                    const uniqueTags: string[] = [...new Set(allTags)];
                     setExistingTags(uniqueTags);
                 }
             })

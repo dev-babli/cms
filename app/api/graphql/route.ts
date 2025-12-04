@@ -1,5 +1,5 @@
 import { createYoga, createSchema } from 'graphql-yoga';
-import { blogPosts, services, teamMembers } from '@/lib/cms/api';
+import { blogPosts, teamMembers } from '@/lib/cms/api';
 
 const typeDefs = `
   type BlogPost {
@@ -18,19 +18,6 @@ const typeDefs = `
     updated_at: String
   }
 
-  type Service {
-    id: Int!
-    slug: String!
-    title: String!
-    description: String
-    content: String
-    icon: String
-    featured_image: String
-    price: String
-    features: String
-    published: Boolean!
-  }
-
   type TeamMember {
     id: Int!
     name: String!
@@ -47,8 +34,6 @@ const typeDefs = `
   type Query {
     blogPosts(published: Boolean): [BlogPost!]!
     blogPost(slug: String!): BlogPost
-    services(published: Boolean): [Service!]!
-    service(slug: String!): Service
     teamMembers(published: Boolean): [TeamMember!]!
   }
 
@@ -79,12 +64,6 @@ const resolvers = {
     },
     blogPost: async (_: any, { slug }: { slug: string }) => {
       return await blogPosts.getBySlug(slug);
-    },
-    services: async (_: any, { published }: { published?: boolean }) => {
-      return await services.getAll(published);
-    },
-    service: async (_: any, { slug }: { slug: string }) => {
-      return await services.getBySlug(slug);
     },
     teamMembers: async (_: any, { published }: { published?: boolean }) => {
       return await teamMembers.getAll(published);

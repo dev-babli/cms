@@ -334,19 +334,34 @@ CREATE INDEX IF NOT EXISTS idx_categories_order ON categories(order_index);
 -- 8. TRIGGERS FOR AUTO-UPDATING TIMESTAMPS
 -- ============================================
 
--- Triggers for new tables
+-- Ensure the trigger function exists (idempotent)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$;
+
+-- Triggers for new tables (drop first to make idempotent)
+DROP TRIGGER IF EXISTS update_ebooks_updated_at ON ebooks;
 CREATE TRIGGER update_ebooks_updated_at BEFORE UPDATE ON ebooks
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_case_studies_updated_at ON case_studies;
 CREATE TRIGGER update_case_studies_updated_at BEFORE UPDATE ON case_studies
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_whitepapers_updated_at ON whitepapers;
 CREATE TRIGGER update_whitepapers_updated_at BEFORE UPDATE ON whitepapers
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_leads_updated_at ON leads;
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Drop existing trigger if it exists (from previous migration)
+DROP TRIGGER IF EXISTS update_categories_updated_at ON categories;
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

@@ -80,6 +80,35 @@ async function runMigrations() {
       console.log('   ⚠️  Error:', error.message);
     }
     
+    // Migration 5: Add scheduled_publish_date to blog_posts and other content tables
+    console.log('\n5️⃣ Adding scheduled_publish_date column...');
+    try {
+      await pool.query(`
+        ALTER TABLE blog_posts 
+        ADD COLUMN IF NOT EXISTS scheduled_publish_date TIMESTAMP
+      `);
+      console.log('   ✅ Added scheduled_publish_date to blog_posts');
+      
+      // Also add to other content tables if they exist
+      const tables = ['ebooks', 'case_studies', 'whitepapers'];
+      for (const table of tables) {
+        try {
+          await pool.query(`
+            ALTER TABLE ${table} 
+            ADD COLUMN IF NOT EXISTS scheduled_publish_date TIMESTAMP
+          `);
+          console.log(`   ✅ Added scheduled_publish_date to ${table}`);
+        } catch (error) {
+          // Table might not exist, that's okay
+          if (!error.message.includes('does not exist')) {
+            console.log(`   ⚠️  Error adding to ${table}:`, error.message);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('   ⚠️  Error:', error.message);
+    }
+    
     console.log('\n✅ All migrations completed!');
     await pool.end();
     process.exit(0);
