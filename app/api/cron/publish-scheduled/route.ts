@@ -4,14 +4,15 @@ import { publishScheduledContent } from '@/lib/cms/scheduled-publisher';
 /**
  * Cron endpoint for scheduled publishing
  * 
- * This endpoint should be called periodically (e.g., every hour) by:
- * - Vercel Cron Jobs
- * - GitHub Actions
- * - External cron service
- * - Or any scheduled task runner
+ * This endpoint is called daily by Vercel Cron Jobs.
+ * 
+ * Schedule: "0 0 * * *" (runs once per day at midnight UTC)
+ * 
+ * Note: Vercel Hobby plans only support daily cron jobs.
+ * For more frequent checks, upgrade to Pro plan or use external cron service.
  * 
  * To secure this endpoint, you can:
- * 1. Add a secret token check
+ * 1. Add a secret token check (CRON_SECRET env variable)
  * 2. Use Vercel Cron with cron secret
  * 3. Restrict by IP address
  */
