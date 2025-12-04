@@ -80,3 +80,4 @@ If you need hourly or more frequent cron jobs:
 
 The scheduled publishing feature will work, but content scheduled for specific times will be published when the daily cron runs (at midnight UTC).
 
+

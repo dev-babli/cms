@@ -76,3 +76,4 @@ export function generateThankYouEmailTemplate(data: ThankYouEmailTemplateData): 
   `;
 }
 
+

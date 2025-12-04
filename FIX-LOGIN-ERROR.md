@@ -122,3 +122,4 @@ SELECT * FROM auth.users;
 - In production, set these as environment variables in your hosting platform (Vercel, etc.)
 - The service role key has admin access - keep it secret!
 
+

@@ -1,4 +1,4 @@
-import { blogPosts, services } from '@/lib/cms/api';
+import { blogPosts } from '@/lib/cms/api';
 import { users, sessions } from '@/lib/auth/users';
 import { workflowEngine } from '@/lib/workflows/engine';
 import bcrypt from 'bcryptjs';
@@ -153,15 +153,6 @@ export const resolvers = {
       return [];
     },
 
-    // Service queries
-    service: async (_: any, { slug }: { slug: string }) => {
-      return await services.getBySlug(slug);
-    },
-
-    services: async (_: any, { published }: { published?: boolean }) => {
-      return await services.getAll(published);
-    },
-
     // Media queries (placeholder)
     mediaFile: async (_: any, { id }: { id: number }) => {
       // Implement media file query
@@ -298,32 +289,6 @@ export const resolvers = {
 
     deleteCategory: async (_: any, { id }: { id: number }) => {
       throw new Error('Not implemented');
-    },
-
-    // Service mutations
-    createService: async (_: any, { input }: { input: any }, context: any) => {
-      const session = await resolvers.Query.me(null, null, context);
-      if (!session) throw new Error('Unauthorized');
-
-      const result = await services.create(input);
-      const newId = (result as any).row?.id || (result as any).lastInsertRowid || null;
-      return { id: Number(newId), ...input };
-    },
-
-    updateService: async (_: any, { id, input }: { id: number; input: any }, context: any) => {
-      const session = await resolvers.Query.me(null, null, context);
-      if (!session) throw new Error('Unauthorized');
-
-      await services.update(id, input);
-      return { id, ...input };
-    },
-
-    deleteService: async (_: any, { id }: { id: number }, context: any) => {
-      const session = await resolvers.Query.me(null, null, context);
-      if (!session) throw new Error('Unauthorized');
-
-      await services.delete(id);
-      return true;
     },
 
     // Media mutations (placeholder)

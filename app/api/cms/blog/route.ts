@@ -101,31 +101,67 @@ export async function POST(request: NextRequest) {
       sanitized.publish_date = new Date().toISOString();
     }
     
-    const result = await blogPosts.create(sanitized);
-    console.log('Blog post created successfully:', result);
-    
-    // Get the ID from the result (PostgreSQL returns the inserted row with RETURNING *)
-    const newId = (result as any).row?.id || (result as any).lastInsertRowid || (result as any).id || null;
-    const createdPost = (result as any).row || { id: newId, ...validated };
-    
-    // Trigger real-time updates
-    if (typeof global !== 'undefined' && (global as any).io) {
-      (global as any).io.emit('blog:created', createdPost);
-    }
-    
-    return NextResponse.json(
-      { 
-        success: true, 
-        data: createdPost
-      },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
+    try {
+      const result = await blogPosts.create(sanitized);
+      console.log('Blog post created successfully:', result);
+      
+      // Handle different database response formats
+      let createdPost: any;
+      if (result && typeof result === 'object') {
+        // PostgreSQL/Supabase format
+        if ((result as any).rows && (result as any).rows.length > 0) {
+          createdPost = (result as any).rows[0];
+        } else if ((result as any).row) {
+          createdPost = (result as any).row;
+        } else if ((result as any).id) {
+          createdPost = { ...sanitized, id: (result as any).id };
+        } else {
+          // SQLite format
+          const newId = (result as any).lastInsertRowid || (result as any).id;
+          createdPost = { ...sanitized, id: newId };
+        }
+      } else {
+        // Fallback
+        createdPost = { ...sanitized, id: null };
       }
-    );
+      
+      // Trigger real-time updates
+      if (typeof global !== 'undefined' && (global as any).io) {
+        (global as any).io.emit('blog:created', createdPost);
+      }
+      
+      return NextResponse.json(
+        { 
+          success: true, 
+          data: createdPost
+        },
+        {
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    } catch (dbError: any) {
+      console.error('Database error during blog post creation:', dbError);
+      // Ensure we always return JSON, even on database errors
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Database error: ${dbError?.message || 'Failed to create blog post'}`,
+          details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined
+        },
+        {
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
   } catch (error: any) {
     console.error('Blog post creation error:', error);
     console.error('Error details:', {

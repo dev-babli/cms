@@ -29,22 +29,6 @@ export const BlogPostSchema = z.object({
 
 export type BlogPost = z.infer<typeof BlogPostSchema>;
 
-// Service Schema
-export const ServiceSchema = z.object({
-  id: z.number().optional(),
-  slug: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  content: z.string().optional(),
-  icon: z.string().optional(),
-  featured_image: z.string().optional(),
-  price: z.string().optional(),
-  features: z.string().optional(),
-  published: z.boolean().default(false),
-});
-
-export type Service = z.infer<typeof ServiceSchema>;
-
 // Team Member Schema
 export const TeamMemberSchema = z.object({
   id: z.number().optional(),

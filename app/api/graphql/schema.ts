@@ -62,20 +62,6 @@ export const typeDefs = `#graphql
     updatedAt: DateTime!
   }
 
-  # Service Types
-  type Service {
-    id: ID!
-    slug: String!
-    title: String!
-    description: String
-    icon: String
-    features: [String!]
-    price: String
-    published: Boolean!
-    createdAt: DateTime!
-    updatedAt: DateTime!
-  }
-
   # Media Types
   type MediaFile {
     id: ID!
@@ -210,10 +196,6 @@ export const typeDefs = `#graphql
     category(id: ID, slug: String): Category
     categories: [Category!]!
 
-    # Service queries
-    service(id: ID, slug: String): Service
-    services(published: Boolean): [Service!]!
-
     # Media queries
     mediaFile(id: ID!): MediaFile
     mediaFiles(
@@ -251,11 +233,6 @@ export const typeDefs = `#graphql
     createCategory(input: CreateCategoryInput!): Category!
     updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
     deleteCategory(id: ID!): Boolean!
-
-    # Service mutations
-    createService(input: CreateServiceInput!): Service!
-    updateService(id: ID!, input: UpdateServiceInput!): Service!
-    deleteService(id: ID!): Boolean!
 
     # Media mutations
     uploadMedia(file: Upload!): MediaFile!
@@ -334,26 +311,6 @@ export const typeDefs = `#graphql
     description: String
     color: String
     icon: String
-  }
-
-  input CreateServiceInput {
-    slug: String!
-    title: String!
-    description: String
-    icon: String
-    features: [String!]
-    price: String
-    published: Boolean
-  }
-
-  input UpdateServiceInput {
-    slug: String
-    title: String
-    description: String
-    icon: String
-    features: [String!]
-    price: String
-    published: Boolean
   }
 
   input UpdateMediaFileInput {

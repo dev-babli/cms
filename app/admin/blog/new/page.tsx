@@ -15,6 +15,9 @@ export default function NewBlogPost() {
     const [loading, setLoading] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [authors, setAuthors] = useState<string[]>([]);
+    const [existingTags, setExistingTags] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         title: "",
         slug: "",
@@ -24,7 +27,7 @@ export default function NewBlogPost() {
         featured_image: "",
         category: "",
         tags: "",
-        published: true, // Default to published so posts show up immediately
+        published: false, // Default to draft - user can publish when ready
         // SEO Fields
         meta_title: "",
         meta_description: "",
@@ -45,6 +48,45 @@ export default function NewBlogPost() {
                 if (data.success) {
                     setUser(data.data.user);
                     setFormData(prev => ({ ...prev, author: data.data.user.name }));
+                }
+            })
+            .catch(console.error);
+        
+        // Fetch categories
+        fetch('/api/cms/categories?content_type=blog')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    setCategories(data.data || []);
+                }
+            })
+            .catch(console.error);
+        
+        // Fetch existing authors
+        fetch('/api/cms/blog?published=true')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    const uniqueAuthors = [...new Set(data.data.map((p: any) => p.author).filter(Boolean))];
+                    setAuthors(uniqueAuthors);
+                }
+            })
+            .catch(console.error);
+        
+        // Fetch existing tags
+        fetch('/api/cms/blog?published=true')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    const allTags = data.data
+                        .map((p: any) => p.tags)
+                        .filter(Boolean)
+                        .join(',')
+                        .split(',')
+                        .map((t: string) => t.trim())
+                        .filter(Boolean);
+                    const uniqueTags = [...new Set(allTags)];
+                    setExistingTags(uniqueTags);
                 }
             })
             .catch(console.error);
@@ -74,20 +116,30 @@ export default function NewBlogPost() {
                     ...formData,
                     title: formData.title.trim(),
                     slug: formData.slug.trim(),
-                    publish_date: new Date().toISOString(),
+                    published: formData.published, // Use the current published state
+                    publish_date: formData.published ? new Date().toISOString() : null,
                 }),
             });
 
-            if (res.ok) {
+            // Check if response is OK and has JSON content
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await res.text();
+                throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+            }
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
                 router.push("/admin/blog");
             } else {
-                const data = await res.json();
                 alert(`Failed to create post: ${data.error || 'Unknown error'}`);
                 console.error('Post creation failed:', data);
             }
         } catch (error) {
             console.error('Error creating post:', error);
-            alert(`Error creating post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            alert(`Error creating post: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -195,8 +247,31 @@ export default function NewBlogPost() {
                             >
                                 Cancel
                             </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    const previewUrl = `/admin/blog/preview/${formData.slug || 'new'}`;
+                                    window.open(previewUrl, '_blank');
+                                }}
+                                disabled={!formData.title}
+                            >
+                                Preview
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    setFormData(prev => ({ ...prev, published: false }));
+                                    await handleSubmit(e as any);
+                                }}
+                                disabled={loading}
+                            >
+                                {loading ? "Saving..." : "Save Draft"}
+                            </Button>
                             <Button onClick={handleSubmit} disabled={loading}>
-                                {loading ? "Publishing..." : formData.published ? "Publish" : "Save Draft"}
+                                {loading ? "Publishing..." : "Publish"}
                             </Button>
                         </div>
                     </div>
@@ -381,30 +456,86 @@ export default function NewBlogPost() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="text-sm">Author</Label>
-                                    <Input
-                                        value={formData.author}
-                                        onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                                        placeholder="Your name"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            list="authors-list"
+                                            value={formData.author}
+                                            onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                                            placeholder="Your name"
+                                        />
+                                        <datalist id="authors-list">
+                                            {authors.map((author, idx) => (
+                                                <option key={idx} value={author} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    {authors.length > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Or select from existing authors above
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label className="text-sm">Category</Label>
-                                    <Input
+                                    <select
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        placeholder="Technology, AI, etc."
-                                    />
+                                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                    >
+                                        <option value="">Select or type new category</option>
+                                        {categories.map((cat) => (
+                                            <option key={cat.id} value={cat.name}>
+                                                {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {formData.category && !categories.find(c => c.name === formData.category) && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            New category will be created
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 <Label className="text-sm">Tags</Label>
-                                <Input
-                                    value={formData.tags}
-                                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                                    placeholder="ai, machine-learning, technology"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        list="tags-list"
+                                        value={formData.tags}
+                                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                                        placeholder="ai, machine-learning, technology"
+                                    />
+                                    <datalist id="tags-list">
+                                        {existingTags.map((tag, idx) => (
+                                            <option key={idx} value={tag} />
+                                        ))}
+                                    </datalist>
+                                </div>
+                                {existingTags.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        <span className="text-xs text-muted-foreground">Suggestions:</span>
+                                        {existingTags.slice(0, 10).map((tag, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentTags = formData.tags ? formData.tags.split(',').map(t => t.trim()) : [];
+                                                    if (!currentTags.includes(tag)) {
+                                                        setFormData({ 
+                                                            ...formData, 
+                                                            tags: [...currentTags, tag].join(', ') 
+                                                        });
+                                                    }
+                                                }}
+                                                className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded-md"
+                                            >
+                                                + {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

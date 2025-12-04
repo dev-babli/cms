@@ -158,6 +158,36 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
                     >
                         H3
                     </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+                        className={`h-8 px-2 text-xs ${editor.isActive('heading', { level: 4 }) ? 'bg-primary/10 text-primary' : ''}`}
+                        title="Heading 4"
+                    >
+                        H4
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
+                        className={`h-8 px-2 text-xs ${editor.isActive('heading', { level: 5 }) ? 'bg-primary/10 text-primary' : ''}`}
+                        title="Heading 5"
+                    >
+                        H5
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}
+                        className={`h-8 px-2 text-xs ${editor.isActive('heading', { level: 6 }) ? 'bg-primary/10 text-primary' : ''}`}
+                        title="Heading 6"
+                    >
+                        H6
+                    </Button>
                 </div>
 
                 {/* Lists */}

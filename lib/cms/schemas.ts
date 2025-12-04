@@ -162,65 +162,6 @@ export const blogPostSchema: Schema = {
   ],
 };
 
-// Service Schema
-export const serviceSchema: Schema = {
-  name: 'service',
-  title: 'Services',
-  type: 'document',
-  icon: '🔧',
-  fields: [
-    {
-      name: 'title',
-      type: 'string',
-      title: 'Service Title',
-      required: true,
-    },
-    {
-      name: 'slug',
-      type: 'string',
-      title: 'URL Slug',
-      required: true,
-    },
-    {
-      name: 'description',
-      type: 'text',
-      title: 'Short Description',
-    },
-    {
-      name: 'content',
-      type: 'richtext',
-      title: 'Full Description',
-    },
-    {
-      name: 'icon',
-      type: 'string',
-      title: 'Icon (emoji or URL)',
-    },
-    {
-      name: 'featured_image',
-      type: 'image',
-      title: 'Featured Image',
-    },
-    {
-      name: 'price',
-      type: 'string',
-      title: 'Pricing',
-      placeholder: '$99/month',
-    },
-    {
-      name: 'features',
-      type: 'array',
-      title: 'Key Features',
-      of: [{ name: 'feature', type: 'string', title: 'Feature' }],
-    },
-    {
-      name: 'published',
-      type: 'boolean',
-      title: 'Published',
-    },
-  ],
-};
-
 // Team Member Schema
 export const teamMemberSchema: Schema = {
   name: 'teamMember',
@@ -291,7 +232,6 @@ export const teamMemberSchema: Schema = {
 // All Schemas
 export const schemas = [
   blogPostSchema,
-  serviceSchema,
   teamMemberSchema,
 ];
 

@@ -20,17 +20,6 @@ export default async function AdminDashboard() {
       count: 12,
     },
     {
-      title: "Services",
-      description: "Your service offerings",
-      href: "/admin/services",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-      count: 8,
-    },
-    {
       title: "Team Members",
       description: "Manage your team",
       href: "/admin/team",
@@ -181,14 +170,6 @@ export default async function AdminDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 New Blog Post
-              </button>
-            </Link>
-            <Link href="/admin/services/new">
-              <button className="px-6 py-3 bg-white text-slate-700 rounded-xl text-sm font-semibold hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-300 shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg flex items-center gap-2 group">
-                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                New Service
               </button>
             </Link>
             <Link href="/admin/ebooks/new">

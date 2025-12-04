@@ -318,3 +318,4 @@ fetch('http://localhost:3001/api/cms/blog?published=true')
 - **Global Styles**: `cms/app/globals.css`
 - **Tailwind Config**: `cms/tailwind.config.ts`
 
+

@@ -4,6 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/cms/rich-text-editor";
 import type { JobPosting } from "@/lib/cms/types";
 
 const defaultJob: Partial<JobPosting> = {
@@ -149,35 +153,32 @@ export default function NewJobPage() {
 
             <div>
               <label className={labelClass}>Description</label>
-              <textarea
-                className={textareaClass}
-                name="description"
-                value={job.description}
-                onChange={handleChange}
-                rows={4}
-              />
+              <div className="border rounded-lg">
+                <RichTextEditor
+                  content={job.description || ""}
+                  onChange={(content) => setJob((prev) => ({ ...prev, description: content }))}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Requirements</label>
-                <textarea
-                  className={textareaClass}
-                  name="requirements"
-                  value={job.requirements}
-                  onChange={handleChange}
-                  rows={4}
-                />
+                <div className="border rounded-lg">
+                  <RichTextEditor
+                    content={job.requirements || ""}
+                    onChange={(content) => setJob((prev) => ({ ...prev, requirements: content }))}
+                  />
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Skills</label>
-                <textarea
-                  className={textareaClass}
-                  name="skills"
-                  value={job.skills}
-                  onChange={handleChange}
-                  rows={4}
-                />
+                <div className="border rounded-lg">
+                  <RichTextEditor
+                    content={job.skills || ""}
+                    onChange={(content) => setJob((prev) => ({ ...prev, skills: content }))}
+                  />
+                </div>
               </div>
             </div>
 

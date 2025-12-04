@@ -1,4 +1,4 @@
-import { blogPosts, services, teamMembers } from './api';
+import { blogPosts, teamMembers } from './api';
 
 export function seedDatabase() {
   // Sample Blog Posts
@@ -83,32 +83,6 @@ export function seedDatabase() {
     },
   ];
 
-  // Sample Services
-  const sampleServices = [
-    {
-      slug: "ai-consulting",
-      title: "AI Strategy Consulting",
-      description: "Expert guidance for your AI transformation journey",
-      content: "Full-service AI consulting to help you identify opportunities and implement solutions.",
-      icon: "🎯",
-      featured_image: "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=1200&auto=format&fit=crop",
-      price: "Custom",
-      features: "Strategy Development, ROI Analysis, Implementation Planning, Team Training",
-      published: true,
-    },
-    {
-      slug: "machine-learning",
-      title: "Machine Learning Development",
-      description: "Custom ML models tailored to your needs",
-      content: "We build custom machine learning models that solve your specific business challenges.",
-      icon: "🤖",
-      featured_image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?q=80&w=1200&auto=format&fit=crop",
-      price: "From $5,000/month",
-      features: "Model Development, Training, Deployment, Monitoring, Optimization",
-      published: true,
-    },
-  ];
-
   // Sample Team Members
   const sampleTeam = [
     {
@@ -140,15 +114,6 @@ export function seedDatabase() {
         blogPosts.create(post);
       } catch (error) {
         console.log('Post already exists:', post.slug);
-      }
-    });
-
-    // Seed services
-    sampleServices.forEach(service => {
-      try {
-        services.create(service);
-      } catch (error) {
-        console.log('Service already exists:', service.slug);
       }
     });
 
