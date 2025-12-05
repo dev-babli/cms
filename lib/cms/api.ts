@@ -102,16 +102,24 @@ export const teamMembers = {
   },
   
   create: async (member: Omit<TeamMember, 'id'>) => {
-    const result = await execute(`
-      INSERT INTO team_members (name, position, qualification, bio, image, email, linkedin, twitter, order_index, published)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *
-    `, [
-      member.name, member.position || '', member.qualification || '', member.bio || '', member.image || '',
-      member.email || '', member.linkedin || '', member.twitter || '',
-      member.order_index || 0, member.published || false
-    ]);
-    return result;
+    try {
+      const result = await execute(`
+        INSERT INTO team_members (name, position, qualification, bio, image, email, linkedin, twitter, order_index, published)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        member.name, member.position || '', member.qualification || '', member.bio || '', member.image || '',
+        member.email || '', member.linkedin || '', member.twitter || '',
+        member.order_index || 0, member.published || false
+      ]);
+      return result.rows?.[0] || result.row || result;
+    } catch (error: any) {
+      // Check if qualification column doesn't exist
+      if (error?.message?.includes('qualification') || error?.message?.includes('column') && error?.message?.includes('does not exist')) {
+        throw new Error(`Database column 'qualification' does not exist. Please run the migration: ALTER TABLE team_members ADD COLUMN qualification TEXT;`);
+      }
+      throw error;
+    }
   },
   
   update: async (id: number, member: Partial<TeamMember>) => {
