@@ -4,10 +4,24 @@ import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseSt
 // Blog Posts
 export const blogPosts = {
   getAll: async (published = false) => {
-    const query = published 
-      ? 'SELECT * FROM blog_posts WHERE published = true ORDER BY publish_date DESC'
-      : 'SELECT * FROM blog_posts ORDER BY created_at DESC';
-    return await db.prepare(query).all();
+    try {
+      const query = published 
+        ? 'SELECT * FROM blog_posts WHERE published = true ORDER BY publish_date DESC'
+        : 'SELECT * FROM blog_posts ORDER BY created_at DESC';
+      console.log('📝 Executing query:', query);
+      const result = await db.prepare(query).all();
+      console.log('📝 Query result:', result?.length || 0, 'posts');
+      return result || [];
+    } catch (error: any) {
+      console.error('❌ Error in blogPosts.getAll:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        detail: error?.detail,
+        hint: error?.hint
+      });
+      throw error;
+    }
   },
   
   getBySlug: async (slug: string) => {

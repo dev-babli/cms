@@ -4,6 +4,10 @@ import { BlogPostSchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 
+// Route segment config - ensure this route is dynamic
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,15 +41,22 @@ export async function GET(request: NextRequest) {
       code: error?.code,
       stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
     });
+    // Always return JSON, never HTML
     return NextResponse.json(
       { 
         success: false, 
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error?.message,
+          code: error?.code,
+          detail: error?.detail,
+          hint: error?.hint
+        } : undefined
       },
       {
         status: 500,
         headers: {
+          'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -96,15 +107,64 @@ export async function POST(request: NextRequest) {
     console.log('Creating blog post with data:', body);
     
     // Enhanced validation with better error handling
-    const validated = BlogPostSchema.parse(body);
+    let validated;
+    try {
+      validated = BlogPostSchema.parse(body);
+      console.log('✅ Validation passed');
+    } catch (validationError: any) {
+      console.error('❌ Validation error:', validationError);
+      if (validationError instanceof z.ZodError) {
+        const errorMessages = validationError.issues.map(err => 
+          `${err.path.join('.')}: ${err.message}`
+        ).join(', ');
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Validation failed: ${errorMessages}` 
+          },
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+          }
+        );
+      }
+      throw validationError;
+    }
     
     // SECURITY: Sanitize HTML content before storing
-    const sanitized: any = {
-      ...validated,
-      title: sanitizeTitle(validated.title),
-      excerpt: sanitizeArticleContent(validated.excerpt),
-      content: sanitizeArticleContent(validated.content),
-    };
+    let sanitized: any;
+    try {
+      sanitized = {
+        ...validated,
+        title: sanitizeTitle(validated.title),
+        excerpt: sanitizeArticleContent(validated.excerpt || ''),
+        content: sanitizeArticleContent(validated.content || ''),
+      };
+      console.log('✅ Sanitization completed');
+    } catch (sanitizeError: any) {
+      console.error('❌ Sanitization error:', sanitizeError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Sanitization failed: ${sanitizeError?.message || 'Unknown error'}`,
+          details: process.env.NODE_ENV === 'development' ? sanitizeError?.message : undefined
+        },
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          },
+        }
+      );
+    }
     
     // Note: custom_tracking_script is not in BlogPostSchema, but if it exists in body, sanitize it
     if ((body as any).custom_tracking_script) {
@@ -125,8 +185,10 @@ export async function POST(request: NextRequest) {
     }
     
     try {
+      console.log('📝 Attempting to create blog post in database...');
+      console.log('📝 Sanitized data keys:', Object.keys(sanitized));
       const result = await blogPosts.create(sanitized);
-      console.log('Blog post created successfully:', result);
+      console.log('✅ Blog post created successfully:', result);
       
       // Handle different database response formats
       let createdPost: any;

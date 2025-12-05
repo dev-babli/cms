@@ -126,13 +126,25 @@ export default function NewBlogPost() {
             // Get response text first (can only read response body once)
             const responseText = await res.text();
             
+            // Log response details for debugging
+            console.log('Response status:', res.status);
+            console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+            console.log('Response text length:', responseText.length);
+            console.log('Response text preview:', responseText.substring(0, 500));
+            
+            // Check if response is empty
+            if (!responseText || responseText.trim().length === 0) {
+                console.error('Empty response from server');
+                throw new Error(`Server returned empty response (Status: ${res.status} ${res.statusText})`);
+            }
+            
             // Check if response is JSON
             const contentType = res.headers.get('content-type');
             const isJson = contentType?.includes('application/json');
             
             if (!isJson) {
                 console.error('Non-JSON response:', responseText);
-                throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 200)}`);
+                throw new Error(`Server returned non-JSON response (Status: ${res.status}): ${responseText.substring(0, 200)}`);
             }
 
             // Parse JSON response
@@ -142,7 +154,7 @@ export default function NewBlogPost() {
             } catch (parseError: any) {
                 console.error('Failed to parse JSON response:', parseError);
                 console.error('Response text:', responseText);
-                throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 200)}`);
+                throw new Error(`Invalid JSON response from server (Status: ${res.status}): ${responseText.substring(0, 200)}`);
             }
 
             if (res.ok && data.success) {
