@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Route segment config - ensure this route is dynamic
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { caseStudies } from '@/lib/cms/api';
 import { CaseStudySchema } from '@/lib/cms/types';
 import { z } from 'zod';
@@ -25,8 +29,23 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Case Studies API Error:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch case studies' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+      { 
+        success: false, 
+        error: error?.message || 'Failed to fetch case studies',
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error?.message,
+          code: error?.code,
+          detail: error?.detail,
+          hint: error?.hint
+        } : undefined
+      },
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        } 
+      }
     );
   }
 }

@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Route segment config - ensure this route is dynamic
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 import { whitepapers } from '@/lib/cms/api';
 import { WhitepaperSchema } from '@/lib/cms/types';
 import { z } from 'zod';
@@ -25,8 +29,23 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Whitepapers API Error:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch whitepapers' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+      { 
+        success: false, 
+        error: error?.message || 'Failed to fetch whitepapers',
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error?.message,
+          code: error?.code,
+          detail: error?.detail,
+          hint: error?.hint
+        } : undefined
+      },
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        } 
+      }
     );
   }
 }

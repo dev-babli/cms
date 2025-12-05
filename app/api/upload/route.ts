@@ -34,16 +34,18 @@ export async function POST(request: NextRequest) {
     // Validate file type
     const allowedTypes = [
       'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-      'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'
+      'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+      'application/pdf' // PDF support
     ];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Allowed: images and videos' },
+        { success: false, error: 'Invalid file type. Allowed: images, videos, and PDFs' },
         { status: 400 }
       );
     }
 
     const isVideo = file.type.startsWith('video/');
+    const isPdf = file.type === 'application/pdf';
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
@@ -53,9 +55,9 @@ export async function POST(request: NextRequest) {
     let finalBuffer: Buffer;
     let mimeType: string;
 
-    if (isVideo) {
-      // For videos, just save as-is
-      const ext = path.extname(file.name);
+    if (isVideo || isPdf) {
+      // For videos and PDFs, just save as-is
+      const ext = path.extname(file.name) || (isPdf ? '.pdf' : '');
       finalFilename = `${nanoid()}${ext}`;
       finalBuffer = buffer;
       mimeType = file.type;
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
         url: publicUrl,
         filename: finalFilename,
         size: finalBuffer.length,
-        type: isVideo ? 'video' : 'image',
+        type: isVideo ? 'video' : (isPdf ? 'pdf' : 'image'),
       },
     });
   } catch (error: any) {

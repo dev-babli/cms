@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 interface MediaUploadProps {
     onUpload: (url: string) => void;
     accept?: string;
-    type?: "image" | "video" | "file";
+    type?: "image" | "video" | "file" | "pdf";
 }
 
 export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadProps) {
@@ -126,7 +126,12 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
         fileInputRef.current?.click();
     };
 
-    const acceptString = accept || (type === "image" ? "image/*" : "video/*");
+    const acceptString = accept || (
+        type === "image" ? "image/*" : 
+        type === "video" ? "video/*" : 
+        type === "pdf" ? "application/pdf" : 
+        "*/*"
+    );
 
     return (
         <div className="space-y-4">
@@ -181,6 +186,16 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                             )}
+                            {type === "pdf" && (
+                                <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                            )}
+                            {type === "file" && (
+                                <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                            )}
                         </div>
 
                         <div>
@@ -190,6 +205,8 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
                             <p className="text-xs text-muted-foreground">
                                 {type === "image" && "PNG, JPG, GIF up to 10MB"}
                                 {type === "video" && "MP4, WebM, MOV up to 100MB"}
+                                {type === "pdf" && "PDF files up to 50MB"}
+                                {type === "file" && "Any file type"}
                             </p>
                         </div>
 
