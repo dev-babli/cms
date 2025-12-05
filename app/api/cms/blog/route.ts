@@ -69,7 +69,30 @@ export async function OPTIONS() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Parse request body with error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Invalid JSON in request body',
+          details: process.env.NODE_ENV === 'development' ? parseError?.message : undefined
+        },
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+    
     console.log('Creating blog post with data:', body);
     
     // Enhanced validation with better error handling
@@ -136,7 +159,9 @@ export async function POST(request: NextRequest) {
           data: createdPost
         },
         {
+          status: 200,
           headers: {
+            'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -155,6 +180,7 @@ export async function POST(request: NextRequest) {
         {
           status: 500,
           headers: {
+            'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -183,6 +209,7 @@ export async function POST(request: NextRequest) {
         {
           status: 400,
           headers: {
+            'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -201,6 +228,7 @@ export async function POST(request: NextRequest) {
       {
         status: 500,
         headers: {
+          'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',

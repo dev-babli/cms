@@ -123,14 +123,27 @@ export default function NewBlogPost() {
                 }),
             });
 
-            // Check if response is OK and has JSON content
+            // Get response text first (can only read response body once)
+            const responseText = await res.text();
+            
+            // Check if response is JSON
             const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await res.text();
-                throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+            const isJson = contentType?.includes('application/json');
+            
+            if (!isJson) {
+                console.error('Non-JSON response:', responseText);
+                throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 200)}`);
             }
 
-            const data = await res.json();
+            // Parse JSON response
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError: any) {
+                console.error('Failed to parse JSON response:', parseError);
+                console.error('Response text:', responseText);
+                throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 200)}`);
+            }
 
             if (res.ok && data.success) {
                 router.push("/admin/blog");
