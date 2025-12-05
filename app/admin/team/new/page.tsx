@@ -16,6 +16,7 @@ export default function NewTeamMember() {
     const [formData, setFormData] = useState({
         name: "",
         position: "",
+        qualification: "",
         bio: "",
         image: "",
         email: "",
@@ -36,10 +37,41 @@ export default function NewTeamMember() {
         setLoading(true);
 
         try {
+            // If no image provided, fetch a unique Unsplash image
+            let finalImage = formData.image;
+            if (!finalImage || finalImage.trim() === '') {
+                try {
+                    // Get existing team members to ensure unique images
+                    const existingRes = await fetch("/api/cms/team?published=true");
+                    const existingData = await existingRes.json();
+                    const existingMembers = existingData.success ? existingData.data : [];
+                    const usedImageIds = existingMembers
+                        .map((m: any) => m.image)
+                        .filter((img: string) => img && img.includes('unsplash'))
+                        .map((img: string) => {
+                            const match = img.match(/sig=(\d+)/);
+                            return match ? match[1] : null;
+                        })
+                        .filter(Boolean);
+                    
+                    // Generate a random seed that's not in usedImageIds
+                    let randomSeed = Math.floor(Math.random() * 10000);
+                    while (usedImageIds.includes(randomSeed.toString())) {
+                        randomSeed = Math.floor(Math.random() * 10000);
+                    }
+                    
+                    // Fetch a person image from Unsplash
+                    finalImage = `https://source.unsplash.com/400x400/?person,portrait&sig=${randomSeed}`;
+                } catch (unsplashError) {
+                    console.error('Failed to fetch Unsplash image:', unsplashError);
+                    // Continue without image if Unsplash fails
+                }
+            }
+
             const res = await fetch("/api/cms/team", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, image: finalImage }),
             });
 
             const contentType = res.headers.get('content-type');
@@ -177,6 +209,15 @@ export default function NewTeamMember() {
                                     placeholder="CEO, CTO, etc."
                                 />
                             </div>
+                        </div>
+
+                        <div>
+                            <Label className="text-sm font-medium">Qualification</Label>
+                            <Input
+                                value={formData.qualification}
+                                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                                placeholder="MBA, Ph.D., B.Tech, etc."
+                            />
                         </div>
 
                         <div>

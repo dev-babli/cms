@@ -34,6 +34,7 @@ export const TeamMemberSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1),
   position: z.string().optional(),
+  qualification: z.string().optional(),
   bio: z.string().optional(),
   image: z.string().optional(),
   email: z.string().email().optional(),

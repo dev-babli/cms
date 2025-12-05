@@ -1,4 +1,4 @@
-import db from '../db';
+import db, { query, execute } from '../db';
 import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Whitepaper, Lead, Category } from './types';
 
 // Blog Posts
@@ -97,32 +97,39 @@ export const teamMembers = {
     const query = published 
       ? 'SELECT * FROM team_members WHERE published = true ORDER BY order_index ASC'
       : 'SELECT * FROM team_members ORDER BY order_index ASC';
-    return await db.prepare(query).all();
+    const result = await query(query);
+    return result.rows || [];
   },
   
   create: async (member: Omit<TeamMember, 'id'>) => {
-    const stmt = db.prepare(`
-      INSERT INTO team_members (name, position, bio, image, email, linkedin, twitter, order_index, published)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    const result = await execute(`
+      INSERT INTO team_members (name, position, qualification, bio, image, email, linkedin, twitter, order_index, published)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `);
-    return await stmt.run(
-      member.name, member.position || '', member.bio || '', member.image || '',
+    `, [
+      member.name, member.position || '', member.qualification || '', member.bio || '', member.image || '',
       member.email || '', member.linkedin || '', member.twitter || '',
       member.order_index || 0, member.published || false
-    );
+    ]);
+    return result;
   },
   
   update: async (id: number, member: Partial<TeamMember>) => {
     const fields = Object.keys(member).filter(k => k !== 'id');
+    if (fields.length === 0) {
+      return { rows: [] };
+    }
     const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
     const values = fields.map(field => member[field as keyof TeamMember]);
-    const stmt = db.prepare(`UPDATE team_members SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`);
-    return await stmt.run(...values, id);
+    const result = await execute(
+      `UPDATE team_members SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $${fields.length + 1} RETURNING *`,
+      [...values, id]
+    );
+    return result.rows?.[0] || result.row || result;
   },
   
   delete: async (id: number) => {
-    return await db.prepare('DELETE FROM team_members WHERE id = $1').run(id);
+    return await execute('DELETE FROM team_members WHERE id = $1', [id]);
   },
 };
 
