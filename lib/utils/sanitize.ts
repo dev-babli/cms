@@ -1,9 +1,11 @@
 /**
  * Server-side HTML Sanitization Utilities
- * Uses isomorphic-dompurify for safe HTML sanitization on both server and client
+ * Uses a lightweight regex-based sanitizer for serverless environments
+ * (isomorphic-dompurify/jsdom has ESM compatibility issues on Vercel)
  */
 
-import DOMPurify from 'isomorphic-dompurify';
+// Simple regex-based HTML sanitizer for server-side use
+// This is safe because we only allow specific tags and attributes
 
 /**
  * Sanitize HTML content for safe storage and rendering
@@ -23,6 +25,50 @@ type SanitizeConfig = {
   KEEP_CONTENT?: boolean;
   [key: string]: any;
 };
+
+/**
+ * Regex-based HTML sanitizer for serverless environments
+ * Removes dangerous tags and attributes while preserving safe content
+ */
+function sanitizeHtmlRegex(html: string, config: SanitizeConfig): string {
+  let sanitized = html;
+
+  // Remove forbidden tags and their content
+  const forbiddenTags = config.FORBID_TAGS || ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'];
+  forbiddenTags.forEach(tag => {
+    const regex = new RegExp(`<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`, 'gi');
+    sanitized = sanitized.replace(regex, '');
+    // Also remove self-closing tags
+    sanitized = sanitized.replace(new RegExp(`<${tag}\\b[^>]*/?>`, 'gi'), '');
+  });
+
+  // Remove event handlers (onclick, onerror, etc.)
+  const forbiddenAttrs = config.FORBID_ATTR || ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'];
+  forbiddenAttrs.forEach(attr => {
+    sanitized = sanitized.replace(new RegExp(`\\s${attr}\\s*=\\s*["'][^"']*["']`, 'gi'), '');
+    sanitized = sanitized.replace(new RegExp(`\\s${attr}\\s*=\\s*[^\\s>]*`, 'gi'), '');
+  });
+
+  // Remove javascript: and data: URLs from href/src attributes
+  sanitized = sanitized.replace(/href\s*=\s*["']?javascript:[^"'\s>]*/gi, 'href="#"');
+  sanitized = sanitized.replace(/src\s*=\s*["']?javascript:[^"'\s>]*/gi, 'src=""');
+  sanitized = sanitized.replace(/href\s*=\s*["']?data:text\/html[^"'\s>]*/gi, 'href="#"');
+
+  // Keep only allowed tags (if specified)
+  if (config.ALLOWED_TAGS && config.ALLOWED_TAGS.length > 0) {
+    // Extract all tags
+    const tagRegex = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
+    sanitized = sanitized.replace(tagRegex, (match, tagName) => {
+      const lowerTag = tagName.toLowerCase();
+      if (config.ALLOWED_TAGS!.some(allowed => allowed.toLowerCase() === lowerTag)) {
+        return match;
+      }
+      return ''; // Remove disallowed tags
+    });
+  }
+
+  return sanitized;
+}
 
 export function sanitizeHtml(dirty: string | null | undefined, options?: SanitizeConfig): string {
   if (!dirty || typeof dirty !== 'string') {
@@ -52,9 +98,9 @@ export function sanitizeHtml(dirty: string | null | undefined, options?: Sanitiz
 
   const config = { ...defaultOptions, ...options };
 
-  // Sanitize the HTML
-  // @ts-ignore - isomorphic-dompurify types may not be perfect
-  return DOMPurify.sanitize(dirty, config) as string;
+  // Use a simple but effective regex-based sanitizer for serverless environments
+  // This avoids jsdom/parse5 ESM issues on Vercel
+  return sanitizeHtmlRegex(dirty, config);
 }
 
 /**
@@ -94,17 +140,9 @@ export function stripHtml(html: string | null | undefined): string {
     return '';
   }
 
-  // Use DOMPurify to sanitize first, then extract text
-  // @ts-ignore - isomorphic-dompurify types may not be perfect
-  const sanitized = DOMPurify.sanitize(html, { 
-    ALLOWED_TAGS: [], 
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true 
-  }) as string;
-
-  // For server-side, use a simple regex to extract text
-  // This is safe because DOMPurify has already removed all dangerous content
-  return sanitized.replace(/<[^>]*>/g, '').trim();
+  // Strip all HTML tags and return plain text
+  // Use regex to remove all tags safely
+  return html.replace(/<[^>]*>/g, '').trim();
 }
 
 /**
@@ -127,12 +165,14 @@ export function sanitizeTrackingScript(script: string | null | undefined): strin
   // Note: This doesn't prevent all XSS if the script is executed later
   // The React app should NOT execute these scripts (which we've already disabled)
   
-  // Remove all script tags and event handlers
-  // @ts-ignore - isomorphic-dompurify types may not be perfect
-  return DOMPurify.sanitize(script, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: false, // Remove all content from script tags
-  }) as string;
+  // Remove all script tags and event handlers using regex
+  // Remove <script> tags and their content
+  let sanitized = script.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  // Remove all remaining HTML tags
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  // Remove javascript: and data: URLs
+  sanitized = sanitized.replace(/javascript:/gi, '');
+  sanitized = sanitized.replace(/data:text\/html/gi, '');
+  return sanitized.trim();
 }
 

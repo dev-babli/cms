@@ -23,7 +23,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
     
-    const posts = await blogPosts.getAll(published);
+    let posts;
+    try {
+      posts = await blogPosts.getAll(published);
+    } catch (dbError: any) {
+      console.error('❌ Database error in blogPosts.getAll:', dbError);
+      // Return JSON error instead of crashing
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Database error: ${dbError?.message || 'Failed to fetch blog posts'}`,
+          details: process.env.NODE_ENV === 'development' ? {
+            message: dbError?.message,
+            code: dbError?.code,
+            detail: dbError?.detail,
+            hint: dbError?.hint
+          } : undefined
+        },
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
     
     // Log for debugging
     console.log(`📝 Blog API: Returning ${posts.length} ${published ? 'published' : 'all'} posts`);
