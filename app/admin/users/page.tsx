@@ -127,6 +127,33 @@ export default function UsersPage() {
         }
     };
 
+    const handleUpdateUserRole = async (userId: number | string, role: string) => {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role }),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setUsers(users.map(user =>
+                        user.id === userId ? { ...user, role: role as any } : user
+                    ));
+                } else {
+                    alert(data.error || "Failed to update user role");
+                }
+            } else {
+                const errorData = await res.json();
+                alert(errorData.error || "Failed to update user role");
+            }
+        } catch (error) {
+            console.error("Failed to update user role:", error);
+            alert("Failed to update user role. Please try again.");
+        }
+    };
+
     const getRoleColor = (role: string) => {
         switch (role) {
             case 'admin': return 'bg-red-100 text-red-800 border-red-200';
@@ -294,9 +321,16 @@ export default function UsersPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getRoleColor(user.role)}`}>
-                                                    {user.role}
-                                                </span>
+                                                <select
+                                                    value={user.role}
+                                                    onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
+                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${getRoleColor(user.role)}`}
+                                                >
+                                                    <option value="viewer">Viewer</option>
+                                                    <option value="author">Author</option>
+                                                    <option value="editor">Editor</option>
+                                                    <option value="admin">Admin</option>
+                                                </select>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                                 {new Date(user.created_at).toLocaleDateString()}
@@ -375,9 +409,16 @@ export default function UsersPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getRoleColor(user.role)}`}>
-                                                {user.role}
-                                            </span>
+                                            <select
+                                                value={user.role}
+                                                onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
+                                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${getRoleColor(user.role)}`}
+                                            >
+                                                <option value="viewer">Viewer</option>
+                                                <option value="author">Author</option>
+                                                <option value="editor">Editor</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <select
