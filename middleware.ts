@@ -4,8 +4,8 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Allow auth pages to pass through
-  if (pathname.startsWith('/auth/')) {
+  // Allow auth pages and API routes to pass through
+  if (pathname.startsWith('/auth/') || pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
   
@@ -20,7 +20,8 @@ export function middleware(request: NextRequest) {
     // Simple check: if no token exists, redirect to login
     // Actual token validation happens in API routes (Node.js runtime)
     if (!supabaseToken && !legacyToken) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
+      const loginUrl = new URL('/auth/login', request.url);
+      return NextResponse.redirect(loginUrl);
     }
     
     // Token exists, let the request through

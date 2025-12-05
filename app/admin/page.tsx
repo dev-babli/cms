@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FadeIn } from "@/components/ui/scroll-reveal";
 import { requireAuth } from "@/lib/auth/server";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 export const dynamic = 'force-dynamic'; // Force dynamic rendering for admin page
 
@@ -130,14 +131,7 @@ export default async function AdminDashboard() {
                 <p className="text-sm font-medium text-slate-900">{user.name}</p>
                 <p className="text-xs text-slate-600 capitalize">{user.role}</p>
               </div>
-              <form action="/api/auth/logout" method="POST">
-                <button 
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
-                >
-                  Logout
-                </button>
-              </form>
+              <LogoutButton />
             </div>
           </div>
         </div>
