@@ -94,10 +94,10 @@ export const blogPosts = {
 // Team Members
 export const teamMembers = {
   getAll: async (published = false) => {
-    const query = published 
+    const sqlQuery = published 
       ? 'SELECT * FROM team_members WHERE published = true ORDER BY order_index ASC'
       : 'SELECT * FROM team_members ORDER BY order_index ASC';
-    const result = await query(query);
+    const result = await query(sqlQuery);
     return result.rows || [];
   },
   
