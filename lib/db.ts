@@ -41,35 +41,43 @@ function getConnectionConfig() {
   };
 }
 
-// Create connection pool
-let pool: Pool;
-try {
-  const poolConfig = getConnectionConfig();
-  pool = new Pool(poolConfig);
-} catch (error: any) {
-  console.error('❌ Failed to initialize database pool:', error.message);
-  // Will be re-initialized on first query if DATABASE_URL becomes available
-  throw error;
+// Create connection pool lazily (only when needed)
+// This prevents crashes during module initialization if DATABASE_URL is missing
+let pool: Pool | null = null;
+
+function setupPoolEventHandlers(poolInstance: Pool) {
+  poolInstance.on('connect', (client) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Connected to PostgreSQL database');
+    }
+  });
+
+  poolInstance.on('error', (err) => {
+    // Don't exit the process - just log the error
+    // Supabase may terminate idle connections, which is normal
+    // The pool will automatically reconnect when needed
+    console.error('⚠️ Database pool error (will auto-reconnect):', err.message);
+    
+    // Only log full error in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Full error:', err);
+    }
+  });
 }
 
-// Test connection
-pool.on('connect', (client) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Connected to PostgreSQL database');
+function getPool(): Pool {
+  if (!pool) {
+    try {
+      const poolConfig = getConnectionConfig();
+      pool = new Pool(poolConfig);
+      setupPoolEventHandlers(pool);
+    } catch (error: any) {
+      console.error('❌ Failed to initialize database pool:', error.message);
+      throw error;
+    }
   }
-});
-
-pool.on('error', (err) => {
-  // Don't exit the process - just log the error
-  // Supabase may terminate idle connections, which is normal
-  // The pool will automatically reconnect when needed
-  console.error('⚠️ Database pool error (will auto-reconnect):', err.message);
-  
-  // Only log full error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Full error:', err);
-  }
-});
+  return pool;
+}
 
 // Helper function to execute queries with retry logic
 export const query = async (text: string, params?: any[], retries = 3): Promise<any> => {
@@ -82,20 +90,18 @@ export const query = async (text: string, params?: any[], retries = 3): Promise<
     throw error;
   }
   
-  // Initialize pool if not already initialized
-  if (!pool) {
-    try {
-      const poolConfig = getConnectionConfig();
-      pool = new Pool(poolConfig);
-    } catch (error: any) {
-      console.error('❌ Failed to create database pool:', error.message);
-      throw new Error(`Database connection failed: ${error.message}`);
-    }
+  // Initialize pool if not already initialized (lazy initialization)
+  let poolInstance: Pool;
+  try {
+    poolInstance = getPool();
+  } catch (error: any) {
+    console.error('❌ Failed to create database pool:', error.message);
+    throw new Error(`Database connection failed: ${error.message}`);
   }
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await pool.query(text, params);
+      const res = await poolInstance.query(text, params);
       const duration = Date.now() - start;
       // Only log in development
       if (process.env.NODE_ENV === 'development') {

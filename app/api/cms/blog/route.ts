@@ -8,6 +8,16 @@ import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Ensure this route is always treated as an API route
+export const revalidate = 0;
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
