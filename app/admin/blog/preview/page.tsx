@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { sanitizeArticleContent, sanitizeTitle, stripHtml } from "@/lib/utils/sanitize";
 
-export default function BlogPreviewPage() {
+function BlogPreviewContent() {
     const searchParams = useSearchParams();
     const [previewData, setPreviewData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -121,5 +121,17 @@ export default function BlogPreviewPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function BlogPreviewPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        }>
+            <BlogPreviewContent />
+        </Suspense>
     );
 }
