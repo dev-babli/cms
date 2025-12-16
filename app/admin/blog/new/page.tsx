@@ -278,7 +278,18 @@ export default function NewBlogPost() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => {
-                                    const previewUrl = `/admin/blog/preview/${formData.slug || 'new'}`;
+                                    // Encode form data and pass to preview page
+                                    const previewData = encodeURIComponent(JSON.stringify({
+                                        title: formData.title,
+                                        slug: formData.slug || 'preview',
+                                        excerpt: formData.excerpt,
+                                        content: formData.content,
+                                        author: formData.author,
+                                        category: formData.category,
+                                        tags: formData.tags,
+                                        featured_image: formData.featured_image,
+                                    }));
+                                    const previewUrl = `/admin/blog/preview?data=${previewData}`;
                                     window.open(previewUrl, '_blank');
                                 }}
                                 disabled={!formData.title}
@@ -342,7 +353,12 @@ export default function NewBlogPost() {
 
                         {/* Featured Image */}
                         <div className="space-y-3">
-                            <Label className="text-sm font-medium">Featured Image</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium">Featured Image</Label>
+                                <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
+                                    Recommended: 1200×630px (16:9) or 1920×1080px
+                                </span>
+                            </div>
 
                             {formData.featured_image ? (
                                 <div className="space-y-3">

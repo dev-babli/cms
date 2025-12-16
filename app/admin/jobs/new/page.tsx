@@ -221,6 +221,31 @@ export default function NewJobPage() {
                   Cancel
                 </Button>
               </Link>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  // Create preview with form data
+                  const previewData = encodeURIComponent(JSON.stringify({
+                    title: job.title,
+                    slug: job.slug || 'preview',
+                    location: job.location,
+                    employment_type: job.employment_type,
+                    remote: job.remote,
+                    salary_range: job.salary_range,
+                    categories: job.categories,
+                    description: job.description,
+                    requirements: job.requirements,
+                    skills: job.skills,
+                    apply_url: job.apply_url,
+                  }));
+                  const previewUrl = `/admin/jobs/preview?data=${previewData}`;
+                  window.open(previewUrl, '_blank');
+                }}
+                disabled={!job.title}
+              >
+                Preview
+              </Button>
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Create Job"}
               </Button>

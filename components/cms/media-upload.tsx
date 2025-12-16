@@ -208,6 +208,11 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
                                 {type === "pdf" && "PDF files up to 50MB"}
                                 {type === "file" && "Any file type"}
                             </p>
+                            {type === "image" && (
+                                <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-2 inline-block">
+                                    Recommended: 800×600px (4:3) or 800×450px (16:9)
+                                </p>
+                            )}
                         </div>
 
                         {uploading && (

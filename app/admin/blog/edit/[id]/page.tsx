@@ -219,7 +219,12 @@ export default function EditBlogPost({ params }: PageProps) {
                             </div>
 
                             <div>
+                                <div className="flex items-center justify-between mb-2">
                                 <Label htmlFor="featured_image">Featured Image URL</Label>
+                                    <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
+                                        Recommended: 1200×630px (16:9) or 1920×1080px
+                                    </span>
+                                </div>
                                 <Input
                                     id="featured_image"
                                     value={formData.featured_image}

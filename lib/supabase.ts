@@ -3,7 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 // Supabase URL (can be public)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 
+// Validate and create Supabase client
+if (!supabaseUrl) {
+  if (typeof window === 'undefined') {
+    // Server-side: provide helpful error
+    console.error('❌ NEXT_PUBLIC_SUPABASE_URL is not set!');
+    console.error('📝 Please check your .env.local file and restart the dev server.');
+    console.error('💡 The .env.local file should contain: NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co');
+  }
+}
+
 // Client-side Supabase client (uses anon key - safe to be public)
+// Note: If URL is empty, Supabase will throw an error - this is intentional to catch config issues early
 export const supabase = createClient(
   supabaseUrl,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',

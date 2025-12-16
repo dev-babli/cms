@@ -179,4 +179,247 @@
     0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
     50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
   }
+
+  /* Editor Specific Styles */
+  .editor-ribbon {
+    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .editor-toolbar-button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .editor-toolbar-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .editor-toolbar-button:active {
+    transform: translateY(0);
+  }
+
+  /* Consistent Spacing System */
+  .spacing-xs { gap: 0.25rem; padding: 0.25rem; }
+  .spacing-sm { gap: 0.5rem; padding: 0.5rem; }
+  .spacing-md { gap: 1rem; padding: 1rem; }
+  .spacing-lg { gap: 1.5rem; padding: 1.5rem; }
+  .spacing-xl { gap: 2rem; padding: 2rem; }
+
+  /* Prevent Cut-offs */
+  .no-cutoff {
+    overflow: visible;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Smooth Scrollbars */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .smooth-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .smooth-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  .smooth-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .smooth-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Smooth scrollbar for editor */
+  .ProseMirror {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .ProseMirror::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ProseMirror::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  .ProseMirror::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 5px;
+  }
+
+  .ProseMirror::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Professional table styles */
+  .ProseMirror table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+  }
+
+  .ProseMirror table td,
+  .ProseMirror table th {
+    border: 1px solid #e5e7eb;
+    padding: 0.5rem;
+    text-align: left;
+  }
+
+  .ProseMirror table th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+  }
+
+  /* Professional list styles */
+  .ProseMirror ul,
+  .ProseMirror ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .ProseMirror li {
+    margin: 0.25rem 0;
+  }
+
+  /* Professional heading styles */
+  .ProseMirror h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .ProseMirror h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .ProseMirror h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .ProseMirror h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ProseMirror h5 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ProseMirror h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Professional link styles */
+  .ProseMirror a {
+    color: #2563eb;
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+
+  .ProseMirror a:hover {
+    color: #1d4ed8;
+  }
+
+  /* Focus styles */
+  .ProseMirror:focus {
+    outline: none;
+  }
+
+  .ProseMirror:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* Selection styles */
+  .ProseMirror ::selection {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  /* Animation for dialogs */
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -48%) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  [data-radix-dialog-content] {
+    animation: slideIn 0.2s ease-out;
+  }
+
+  /* Professional button hover effects */
+  .btn-professional {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-professional::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .btn-professional:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Professional dropdown styles */
+  .dropdown-menu {
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
