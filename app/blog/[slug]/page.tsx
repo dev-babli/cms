@@ -150,21 +150,41 @@ export default async function BlogPostPage({ params }: PageProps) {
             prose-headings:text-slate-900 prose-headings:font-bold
             prose-h1:text-3xl prose-h1:mb-6 prose-h1:mt-12 prose-h1:tracking-tight
             prose-h2:text-2xl prose-h2:mb-4 prose-h2:mt-10 prose-h2:tracking-tight
-            prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-8 prose-h3:tracking-tight
+            prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-8 prose-h3:tracking-tight prose-h3:font-bold
+            prose-h4:text-lg prose-h4:mb-3 prose-h4:mt-6 prose-h4:tracking-tight prose-h4:font-bold
+            prose-h5:text-base prose-h5:mb-2 prose-h5:mt-4 prose-h5:tracking-tight prose-h5:font-semibold
+            prose-h6:text-sm prose-h6:mb-2 prose-h6:mt-4 prose-h6:tracking-tight prose-h6:font-semibold prose-h6:uppercase prose-h6:tracking-wider
             prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-6 prose-p:text-lg
             prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
             prose-strong:text-slate-900 prose-strong:font-semibold
-            prose-ul:list-disc prose-ul:pl-6 prose-ul:mb-6 prose-ul:text-lg
-            prose-ol:list-decimal prose-ol:pl-6 prose-ol:mb-6 prose-ol:text-lg
-            prose-li:text-slate-700 prose-li:mb-2 prose-li:leading-relaxed
+            prose-ul:list-disc prose-ul:list-outside prose-ul:pl-6 prose-ul:mb-6 prose-ul:text-lg
+            prose-ol:list-decimal prose-ol:list-outside prose-ol:pl-6 prose-ol:mb-6 prose-ol:text-lg
+            prose-li:text-slate-700 prose-li:mb-2 prose-li:leading-relaxed prose-li:pl-2
             prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-slate-600 prose-blockquote:bg-slate-50 prose-blockquote:py-4 prose-blockquote:my-6
             prose-code:text-blue-600 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
             prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-lg prose-pre:p-4 prose-pre:shadow-xl
             prose-img:rounded-xl prose-img:shadow-xl prose-img:my-10 prose-img:w-full
+            [&_img[style*='float:left']]:float-left [&_img[style*='float:left']]:mr-4 [&_img[style*='float:left']]:mb-4
+            [&_img[style*='float:right']]:float-right [&_img[style*='float:right']]:ml-4 [&_img[style*='float:right']]:mb-4
+            [&_img[style*='display:block']]:block [&_img[style*='display:block']]:mx-auto
             prose-hr:border-slate-200 prose-hr:my-10
             [&_.lead]:text-xl [&_.lead]:font-light [&_.lead]:text-slate-600 [&_.lead]:leading-relaxed
             [&_div[style*='background']]:rounded-xl [&_div[style*='background']]:shadow-lg
-            [&_div[style*='border']]:rounded-lg"
+            [&_div[style*='border']]:rounded-lg
+            [&_u]:underline
+            [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:rounded
+            [&_sub]:text-xs [&_sub]:align-sub
+            [&_sup]:text-xs [&_sup]:align-super
+            [&_span[style*='color']]:[color:inherit]
+            [&_span[style*='background-color']]:[background-color:inherit]
+            [&_span[style*='font-size']]:[font-size:inherit]
+            [&_p[style*='text-align']]:[text-align:inherit]
+            [&_h1[style*='text-align']]:[text-align:inherit]
+            [&_h2[style*='text-align']]:[text-align:inherit]
+            [&_h3[style*='text-align']]:[text-align:inherit]
+            [&_h4[style*='text-align']]:[text-align:inherit]
+            [&_h5[style*='text-align']]:[text-align:inherit]
+            [&_h6[style*='text-align']]:[text-align:inherit]"
           dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(post.content || '') }}
         />
 

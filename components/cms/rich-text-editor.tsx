@@ -112,12 +112,12 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                 },
                 bulletList: {
                     HTMLAttributes: {
-                        class: 'list-disc list-inside my-4 space-y-2 ml-4',
+                        class: 'list-disc list-outside my-4 space-y-2 ml-6',
                     },
                 },
                 orderedList: {
                     HTMLAttributes: {
-                        class: 'list-decimal list-inside my-4 space-y-2 ml-4',
+                        class: 'list-decimal list-outside my-4 space-y-2 ml-6',
                     },
                 },
             }),

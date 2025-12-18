@@ -68,10 +68,22 @@ export default function NewTeamMember() {
                 }
             }
 
+            // Clean up form data - convert empty strings to undefined for optional fields
+            const cleanedData = {
+                ...formData,
+                image: finalImage,
+                position: formData.position?.trim() || undefined,
+                qualification: formData.qualification?.trim() || undefined,
+                bio: formData.bio?.trim() || undefined,
+                email: formData.email?.trim() || undefined,
+                linkedin: formData.linkedin?.trim() || undefined,
+                twitter: formData.twitter?.trim() || undefined,
+            };
+
             const res = await fetch("/api/cms/team", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, image: finalImage }),
+                body: JSON.stringify(cleanedData),
             });
 
             const contentType = res.headers.get('content-type');

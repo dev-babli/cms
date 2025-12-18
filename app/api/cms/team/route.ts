@@ -48,7 +48,20 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = TeamMemberSchema.parse(body);
+    
+    // Clean up empty strings - convert to undefined for optional fields
+    const cleanedBody = {
+      ...body,
+      position: body.position?.trim() || undefined,
+      qualification: body.qualification?.trim() || undefined,
+      bio: body.bio?.trim() || undefined,
+      email: body.email?.trim() || undefined,
+      linkedin: body.linkedin?.trim() || undefined,
+      twitter: body.twitter?.trim() || undefined,
+      image: body.image?.trim() || undefined,
+    };
+    
+    const validated = TeamMemberSchema.parse(cleanedBody);
     
     const result = await teamMembers.create(validated);
     return NextResponse.json(
@@ -63,6 +76,30 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Error creating team member:', error);
+    
+    // Handle Zod validation errors
+    if (error?.issues) {
+      const validationErrors = error.issues.map((issue: any) => 
+        `${issue.path.join('.')}: ${issue.message}`
+      ).join(', ');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Validation failed: ${validationErrors}`,
+          details: process.env.NODE_ENV === 'development' ? error.issues : undefined
+        },
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+    
     const errorMessage = error?.message || 'Failed to create team member';
     const errorDetails = process.env.NODE_ENV === 'development' ? {
       message: error?.message,

@@ -16,13 +16,43 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
         const updatePosition = () => {
             const { from, to } = editor.state.selection;
             if (from !== to) {
-                const { $anchor } = editor.state.selection;
-                const coords = editor.view.coordsAtPos($anchor.pos);
+                const { $anchor, $head } = editor.state.selection;
+                // Use both anchor and head to get better positioning
+                const startCoords = editor.view.coordsAtPos(Math.min(from, to));
+                const endCoords = editor.view.coordsAtPos(Math.max(from, to));
                 const editorRect = editor.view.dom.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const toolbarHeight = 50; // Approximate toolbar height
+                
+                // Calculate position based on selection midpoint
+                const midTop = (startCoords.top + endCoords.top) / 2;
+                const midLeft = (startCoords.left + endCoords.left) / 2;
+                
+                // Check if we're near the bottom of the viewport
+                const spaceBelow = viewportHeight - midTop;
+                const spaceAbove = midTop;
+                
+                // Position toolbar above selection if near bottom, below if near top
+                let topOffset;
+                if (spaceBelow < toolbarHeight + 20 && spaceAbove > spaceBelow) {
+                    // Position above selection
+                    topOffset = midTop - editorRect.top - toolbarHeight - 10;
+                } else {
+                    // Position below selection
+                    topOffset = midTop - editorRect.top + 10;
+                }
+                
+                // Ensure toolbar stays within editor bounds
+                topOffset = Math.max(0, Math.min(topOffset, editorRect.height - toolbarHeight));
+                
+                // Calculate left position, ensuring it stays within editor bounds
+                let leftOffset = midLeft - editorRect.left;
+                const toolbarWidth = 300; // Approximate toolbar width
+                leftOffset = Math.max(0, Math.min(leftOffset, editorRect.width - toolbarWidth));
                 
                 setPosition({
-                    top: coords.top - editorRect.top - 50,
-                    left: coords.left - editorRect.left,
+                    top: topOffset,
+                    left: leftOffset,
                 });
                 setIsVisible(true);
             } else {
@@ -32,21 +62,31 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
 
         editor.on('selectionUpdate', updatePosition);
         editor.on('transaction', updatePosition);
+        // Also listen to scroll events to update position
+        const handleScroll = () => {
+            if (editor.state.selection.from !== editor.state.selection.to) {
+                updatePosition();
+            }
+        };
+        window.addEventListener('scroll', handleScroll, true);
 
         return () => {
             editor.off('selectionUpdate', updatePosition);
             editor.off('transaction', updatePosition);
+            window.removeEventListener('scroll', handleScroll, true);
         };
     }, [editor]);
 
     if (!isVisible) return null;
 
+    const editorRect = editor.view.dom.getBoundingClientRect();
+    
     return (
         <div
-            className="absolute z-50 bg-white border border-border rounded-lg shadow-xl p-2 flex items-center gap-1"
+            className="fixed z-50 bg-white border border-border rounded-lg shadow-xl p-2 flex items-center gap-1"
             style={{
-                top: `${position.top}px`,
-                left: `${position.left}px`,
+                top: `${position.top + editorRect.top + window.scrollY}px`,
+                left: `${position.left + editorRect.left}px`,
                 transform: 'translateX(-50%)',
             }}
         >
@@ -128,4 +168,5 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
         </div>
     );
 }
+
 

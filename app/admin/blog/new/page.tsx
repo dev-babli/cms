@@ -94,16 +94,16 @@ export default function NewBlogPost() {
             .catch(console.error);
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmitWithData = async (e: React.FormEvent, dataToSubmit: typeof formData) => {
         e.preventDefault();
 
         // Validate required fields
-        if (!formData.title.trim()) {
+        if (!dataToSubmit.title.trim()) {
             alert("Please enter a title for your post");
             return;
         }
 
-        if (!formData.slug.trim()) {
+        if (!dataToSubmit.slug.trim()) {
             alert("Please enter a slug for your post");
             return;
         }
@@ -115,11 +115,11 @@ export default function NewBlogPost() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    ...formData,
-                    title: formData.title.trim(),
-                    slug: formData.slug.trim(),
-                    published: formData.published, // Use the current published state
-                    publish_date: formData.published ? new Date().toISOString() : null,
+                    ...dataToSubmit,
+                    title: dataToSubmit.title.trim(),
+                    slug: dataToSubmit.slug.trim(),
+                    published: dataToSubmit.published,
+                    publish_date: dataToSubmit.published ? new Date().toISOString() : null,
                 }),
             });
 
@@ -158,18 +158,24 @@ export default function NewBlogPost() {
             }
 
             if (res.ok && data.success) {
+                const message = dataToSubmit.published ? "Post published successfully!" : "Draft saved successfully!";
+                alert(message);
                 router.push("/admin/blog");
             } else {
-                alert(`Failed to create post: ${data.error || 'Unknown error'}`);
+                alert(`Failed to ${dataToSubmit.published ? 'publish' : 'save draft'}: ${data.error || 'Unknown error'}`);
                 console.error('Post creation failed:', data);
             }
         } catch (error) {
             console.error('Error creating post:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            alert(`Error creating post: ${errorMessage}`);
+            alert(`Error ${dataToSubmit.published ? 'publishing' : 'saving draft'}: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        await handleSubmitWithData(e, formData);
     };
 
     const generateSlug = (title: string) => {
@@ -301,14 +307,23 @@ export default function NewBlogPost() {
                                 variant="outline"
                                 onClick={async (e) => {
                                     e.preventDefault();
-                                    setFormData(prev => ({ ...prev, published: false }));
-                                    await handleSubmit(e as any);
+                                    // Create a modified form data with published: false
+                                    const draftData = { ...formData, published: false };
+                                    await handleSubmitWithData(e as any, draftData);
                                 }}
                                 disabled={loading}
                             >
                                 {loading ? "Saving..." : "Save Draft"}
                             </Button>
-                            <Button onClick={handleSubmit} disabled={loading}>
+                            <Button 
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    // Create a modified form data with published: true
+                                    const publishData = { ...formData, published: true };
+                                    await handleSubmitWithData(e as any, publishData);
+                                }} 
+                                disabled={loading}
+                            >
                                 {loading ? "Publishing..." : "Publish"}
                             </Button>
                         </div>
@@ -355,9 +370,14 @@ export default function NewBlogPost() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Label className="text-sm font-medium">Featured Image</Label>
-                                <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
-                                    Recommended: 1200×630px (16:9) or 1920×1080px
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
+                                        📐 Recommended: 1200×630px (16:9)
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Or 1920×1080px for high-res
+                                    </span>
+                                </div>
                             </div>
 
                             {formData.featured_image ? (
@@ -513,30 +533,59 @@ export default function NewBlogPost() {
                                         </datalist>
                                     </div>
                                     {authors.length > 0 && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Or select from existing authors above
-                                        </p>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            <span className="text-xs text-muted-foreground">Quick select:</span>
+                                            {authors.slice(0, 8).map((author, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, author })}
+                                                    className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                                >
+                                                    {author}
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label className="text-sm">Category</Label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                    >
-                                        <option value="">Select or type new category</option>
-                                        {categories.map((cat) => (
-                                            <option key={cat.id} value={cat.name}>
-                                                {cat.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {formData.category && !categories.find(c => c.name === formData.category) && (
+                                    <div className="relative">
+                                        <Input
+                                            list="categories-list"
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                            placeholder="Select or type new category"
+                                            className="w-full"
+                                        />
+                                        <datalist id="categories-list">
+                                            {categories.map((cat) => (
+                                                <option key={cat.id} value={cat.name} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    {categories.length > 0 && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            New category will be created
+                                            {formData.category && !categories.find(c => c.name === formData.category) 
+                                                ? "New category will be created" 
+                                                : "Select from existing categories above or type a new one"}
                                         </p>
+                                    )}
+                                    {categories.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            <span className="text-xs text-muted-foreground">Quick select:</span>
+                                            {categories.slice(0, 8).map((cat) => (
+                                                <button
+                                                    key={cat.id}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, category: cat.name })}
+                                                    className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                                                >
+                                                    {cat.name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>
