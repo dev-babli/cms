@@ -60,3 +60,4 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
 }
 
 
+

@@ -1,0 +1,13 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/vtj6gbk3aj93/public_html/thesoftreetechnology.com/cms
+    - /bin/cp -R * $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - /bin/cp -R .next $DEPLOYPATH 2>/dev/null || true
+    - /bin/cp -R public $DEPLOYPATH 2>/dev/null || true
+    - npm install --production
+    - npm run build || true
+    - /bin/chmod 755 $DEPLOYPATH
+    - /bin/chmod 644 $DEPLOYPATH/*.js $DEPLOYPATH/*.json $DEPLOYPATH/*.ts 2>/dev/null || true
+
