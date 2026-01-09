@@ -404,9 +404,9 @@ export async function POST(request: NextRequest) {
       sendAdminNotificationEmail({
         name: `${validated.first_name} ${validated.last_name || ''}`.trim() || validated.email,
         email: validated.email,
-        company: validated.company,
-        phone: validated.phone,
-        message: validated.notes,
+        company: validated.company ?? undefined,
+        phone: validated.phone ?? undefined,
+        message: validated.notes ?? undefined,
       }).then(() => {
         console.log('✅ Leads API: Admin notification email sent');
       }).catch((error) => {

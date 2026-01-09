@@ -426,7 +426,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div>
             <h3 className="text-sm font-semibold text-[#111827] mb-4 uppercase tracking-wide">Categories</h3>
             <div className="space-y-2">
-              {categories.map((category: string) => (
+              {(categories as string[]).map((category: string) => (
                 <Link
                   key={category}
                   href={`/blog?category=${encodeURIComponent(category)}`}
@@ -442,7 +442,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div>
             <h3 className="text-sm font-semibold text-[#111827] mb-4 uppercase tracking-wide">Popular Tags</h3>
             <div className="flex flex-wrap gap-2">
-              {allTags.map((tag: string) => (
+              {(allTags as string[]).map((tag: string) => (
                 <Link
                   key={tag}
                   href={`/blog?tag=${encodeURIComponent(tag)}`}

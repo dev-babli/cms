@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
 import { securityCheck, applySecurityHeaders } from '@/lib/security/security-middleware';
 import { getClientIdentifier } from '@/lib/security/rate-limiter';
 import { recordViolation } from '@/lib/security/ip-manager';

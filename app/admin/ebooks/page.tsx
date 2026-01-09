@@ -94,7 +94,7 @@ export default function EbooksList() {
 
     return (
         <ContentList
-            items={ebooks}
+            items={ebooks.filter((ebook: any) => ebook.id !== undefined).map((ebook: any) => ({ ...ebook, id: ebook.id || 0 }))}
             loading={loading}
             emptyTitle="No eBooks yet"
             emptyDescription="Create your first eBook to start capturing leads"

@@ -53,7 +53,7 @@ import { BordersShading } from './borders-shading';
 import { InlineFormattingPanel } from './inline-formatting-panel';
 import { InlineLinkInput } from './inline-link-input';
 import { InlineSettingsSidebar } from './inline-settings-sidebar';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Bold, Italic, Underline as UnderlineIcon, Strikethrough, Subscript as SubscriptIcon,
     Superscript as SuperscriptIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify,
@@ -65,7 +65,7 @@ import {
     FileText, Layout, Printer, Keyboard, Settings, AlignJustify as AlignJustifyIcon,
     Indent, Outdent, Calendar, Hash, Bookmark, FileX, Grid, FileEdit,
     ZoomIn, ZoomOut, Maximize, Minimize, Square, FormInput, ChevronDown, HelpCircle,
-    ListChecks, FileQuestion
+    ListChecks, FileQuestion, Save, CheckCircle2, Loader2
 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -97,6 +97,12 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
     const [pageSettings, setPageSettings] = useState<PageSettings | null>(null);
     const [documentInfo, setDocumentInfo] = useState<DocumentInfo | null>(null);
     const [viewMode, setViewMode] = useState<'print' | 'web' | 'draft'>('print');
+    
+    // Auto-save state
+    const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -255,10 +261,107 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         },
     });
 
+    // Auto-save function with debouncing
+    const autoSave = useCallback(async () => {
+        if (!editor || editor.isDestroyed) return;
+        
+        const currentContent = editor.getHTML();
+        if (currentContent === content) {
+            setSaveStatus('saved');
+            return;
+        }
+
+        setSaveStatus('saving');
+        
+        try {
+            // Save to local storage as backup
+            const storageKey = `rte-autosave-${Date.now()}`;
+            localStorage.setItem(storageKey, currentContent);
+            
+            // Keep only last 5 auto-saves
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('rte-autosave-'));
+            if (keys.length > 5) {
+                keys.sort().slice(0, keys.length - 5).forEach(k => localStorage.removeItem(k));
+            }
+            
+            // Call parent onChange callback
+            onChange(currentContent);
+            
+            setSaveStatus('saved');
+            setLastSaved(new Date());
+        } catch (error) {
+            console.error('Auto-save failed:', error);
+            setSaveStatus('unsaved');
+        }
+    }, [editor, content, onChange]);
+
+    // Debounced auto-save on content change
+    useEffect(() => {
+        if (!editor || editor.isDestroyed) return;
+
+        const handleUpdate = () => {
+            setSaveStatus('unsaved');
+            
+            // Clear existing timeout
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+            
+            // Debounce: save after 2 seconds of inactivity
+            saveTimeoutRef.current = setTimeout(() => {
+                autoSave();
+            }, 2000);
+        };
+
+        editor.on('update', handleUpdate);
+        editor.on('selectionUpdate', handleUpdate);
+
+        return () => {
+            editor.off('update', handleUpdate);
+            editor.off('selectionUpdate', handleUpdate);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [editor, autoSave]);
+
+    // Periodic auto-save (every 30 seconds as backup)
+    useEffect(() => {
+        if (!editor || editor.isDestroyed) return;
+
+        autoSaveIntervalRef.current = setInterval(() => {
+            if (saveStatus === 'unsaved') {
+                autoSave();
+            }
+        }, 30000); // 30 seconds
+
+        return () => {
+            if (autoSaveIntervalRef.current) {
+                clearInterval(autoSaveIntervalRef.current);
+            }
+        };
+    }, [editor, saveStatus, autoSave]);
+
+    // Manual save function (Ctrl/Cmd + S)
+    useEffect(() => {
+        if (!editor || editor.isDestroyed) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                event.preventDefault();
+                autoSave();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editor, autoSave]);
+
     // Sync content when prop changes
     useEffect(() => {
         if (editor && !editor.isDestroyed && content !== editor.getHTML()) {
-            editor.commands.setContent(content, false);
+            editor.commands.setContent(content, { emitUpdate: false });
+            setSaveStatus('saved');
         }
     }, [content, editor]);
 
@@ -398,6 +501,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         label, 
         shortcut,
         className = '',
+        title,
         children 
     }: { 
         onClick: () => void; 
@@ -406,6 +510,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         label: string; 
         shortcut?: string;
         className?: string;
+        title?: string;
         children?: React.ReactNode;
     }) => (
         <button
@@ -420,7 +525,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                 }
                 ${className}
             `}
-            title={shortcut ? `${label} (${shortcut})` : label}
+            title={title || (shortcut ? `${label} (${shortcut})` : label)}
             aria-label={label}
             aria-pressed={isActive}
         >
@@ -527,7 +632,40 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                 Review
                             </button>
                             <div className="ml-auto flex items-center gap-2 px-4">
+                                {/* Auto-save Status Indicator */}
+                                <div className="flex items-center gap-2 text-xs text-[#6B7280]">
+                                    {saveStatus === 'saving' && (
+                                        <div className="flex items-center gap-1.5">
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3B82F6]" />
+                                            <span className="hidden sm:inline">Saving...</span>
+                                        </div>
+                                    )}
+                                    {saveStatus === 'saved' && lastSaved && (
+                                        <div className="flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                                            <span className="hidden sm:inline">
+                                                Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {saveStatus === 'unsaved' && (
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-2 h-2 rounded-full bg-[#F59E0B]"></div>
+                                            <span className="hidden sm:inline">Unsaved changes</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="w-px h-6 bg-border mx-2" />
                                 <ZoomControls zoom={zoom} onZoomChange={setZoom} />
+                                <div className="w-px h-6 bg-border mx-2 hidden md:block" />
+                                <ToolbarButton
+                                    onClick={autoSave}
+                                    icon={Save}
+                                    label="Save"
+                                    shortcut="Ctrl+S"
+                                    className="h-8 hidden md:flex"
+                                    title="Save (Ctrl+S)"
+                                />
                                 <div className="w-px h-6 bg-border mx-2" />
                                 <ToolbarButton
                                     onClick={toggleFocusMode}
@@ -539,16 +677,16 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     onClick={toggleFullscreen}
                                     icon={isFullscreen ? Minimize2 : Maximize2}
                                     label="Fullscreen"
-                                    className="h-8"
+                                    className="h-8 hidden sm:flex"
                                 />
                                 <ThemeSelector />
                             </div>
                         </div>
 
-                        {/* Tab Content */}
-                        <div className="p-4 bg-white min-h-[64px] overflow-x-auto border-b border-[#E5E7EB]">
+                        {/* Tab Content - Mobile Responsive */}
+                        <div className="p-2 sm:p-4 bg-white min-h-[64px] overflow-x-auto border-b border-[#E5E7EB]">
                             {activeTab === 'home' && (
-                                <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                                     {/* Clipboard Group */}
                                     <ToolbarGroup title="Clipboard">
                                         <ToolbarButton

@@ -234,6 +234,16 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-400;
   }
+  
+  /* Hide scrollbar on mobile for horizontal scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {

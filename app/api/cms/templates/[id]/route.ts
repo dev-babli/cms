@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/server";
-import { db } from "@/lib/db";
+import { execute } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function DELETE(
     await requireAuth();
     const { id } = await params;
 
-    await db.query("DELETE FROM content_templates WHERE id = $1", [id]);
+    await execute("DELETE FROM content_templates WHERE id = $1", [id]);
 
     return NextResponse.json({
       success: true,

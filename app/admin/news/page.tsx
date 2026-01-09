@@ -94,7 +94,7 @@ export default function NewsList() {
 
     return (
         <ContentList
-            items={newsItems}
+            items={newsItems.filter((news: any) => news.id !== undefined).map((news: any) => ({ ...news, id: news.id || 0 }))}
             loading={loading}
             emptyTitle="No news items yet"
             emptyDescription="Create your first news item or announcement"

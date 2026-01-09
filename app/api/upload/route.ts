@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import sharp from 'sharp';
-import db from '@/lib/db';
+import { execute } from '@/lib/db';
 import { createServerClient } from '@/lib/supabase';
 
 import { getCurrentUser } from '@/lib/auth/server';

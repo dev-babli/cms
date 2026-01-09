@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
       company: 'Test Company',
       notes: 'This is a test lead',
       consent_data_processing: true,
+      status: 'new' as const,
+      crm_synced: false,
+      consent_marketing: false,
     };
     
     const result = await leads.create(testLead);

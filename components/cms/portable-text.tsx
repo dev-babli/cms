@@ -59,36 +59,37 @@ function renderBlock(block: PortableTextBlock, index: number) {
   const renderedChildren = children.map((child, childIndex) => {
     let text = child.text;
     const marks = child.marks || [];
+    let textElement: React.ReactNode = text;
 
-    // Apply marks (bold, italic, etc.)
+    // Apply marks (bold, italic, etc.) sequentially
     marks.forEach((markKey) => {
       const markDef = markDefs?.find((def) => def._key === markKey);
       if (markDef) {
         switch (markDef._type) {
           case "link":
-            text = (
+            textElement = (
               <a
                 key={`${block._key}-${childIndex}-link`}
                 href={markDef.href}
                 className="text-[#3B82F6] hover:underline"
               >
-                {text}
+                {textElement}
               </a>
             );
             break;
           case "strong":
-            text = <strong key={`${block._key}-${childIndex}-strong`}>{text}</strong>;
+            textElement = <strong key={`${block._key}-${childIndex}-strong`}>{textElement}</strong>;
             break;
           case "em":
-            text = <em key={`${block._key}-${childIndex}-em`}>{text}</em>;
+            textElement = <em key={`${block._key}-${childIndex}-em`}>{textElement}</em>;
             break;
           case "code":
-            text = (
+            textElement = (
               <code
                 key={`${block._key}-${childIndex}-code`}
                 className="px-1 py-0.5 bg-[#F3F4F6] text-[#111827] rounded text-sm font-mono"
               >
-                {text}
+                {textElement}
               </code>
             );
             break;
@@ -96,16 +97,16 @@ function renderBlock(block: PortableTextBlock, index: number) {
       } else {
         // Simple marks without definitions
         if (markKey === "strong") {
-          text = <strong key={`${block._key}-${childIndex}-strong`}>{text}</strong>;
+          textElement = <strong key={`${block._key}-${childIndex}-strong`}>{textElement}</strong>;
         } else if (markKey === "em") {
-          text = <em key={`${block._key}-${childIndex}-em`}>{text}</em>;
+          textElement = <em key={`${block._key}-${childIndex}-em`}>{textElement}</em>;
         } else if (markKey === "code") {
-          text = (
+          textElement = (
             <code
               key={`${block._key}-${childIndex}-code`}
               className="px-1 py-0.5 bg-[#F3F4F6] text-[#111827] rounded text-sm font-mono"
             >
-              {text}
+              {textElement}
             </code>
           );
         }
@@ -114,7 +115,7 @@ function renderBlock(block: PortableTextBlock, index: number) {
 
     return (
       <span key={`${block._key}-${childIndex}`} className="inline">
-        {text}
+        {textElement}
       </span>
     );
   });

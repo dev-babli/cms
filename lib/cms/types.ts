@@ -150,7 +150,7 @@ export const EbookSchema = z.object({
   schema_markup: z.string().optional(),
   google_analytics_id: z.string().optional(),
   custom_tracking_script: z.string().optional(),
-  created_by: z.number().optional(),
+  created_by: z.string().optional(),
 });
 
 export type Ebook = z.infer<typeof EbookSchema>;
@@ -193,7 +193,7 @@ export const CaseStudySchema = z.object({
   schema_markup: z.string().optional(),
   google_analytics_id: z.string().optional(),
   custom_tracking_script: z.string().optional(),
-  created_by: z.number().optional(),
+  created_by: z.string().optional(),
 });
 
 export type CaseStudy = z.infer<typeof CaseStudySchema>;
@@ -285,6 +285,7 @@ export const NewsSchema = z.object({
   author: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  created_by: z.string().optional(),
 });
 
 export type News = z.infer<typeof NewsSchema>;

@@ -856,6 +856,7 @@ export const news = {
     author?: string;
     category?: string;
     tags?: string[];
+    created_by?: string | null;
   }) => {
     // Convert tags array to PostgreSQL array format: {tag1,tag2} or {} for empty
     const tagsArray = item.tags && item.tags.length > 0 

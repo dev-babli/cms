@@ -94,7 +94,7 @@ export default function CaseStudiesList() {
 
     return (
         <ContentList
-            items={caseStudies}
+            items={caseStudies.filter((cs: any) => cs.id !== undefined).map((cs: any) => ({ ...cs, id: cs.id || 0 }))}
             loading={loading}
             emptyTitle="No case studies yet"
             emptyDescription="Create your first case study to showcase client success"

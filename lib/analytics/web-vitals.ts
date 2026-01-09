@@ -1,7 +1,7 @@
 // Core Web Vitals tracking for performance monitoring
 // Based on Next.js 15 and web-vitals 4.x standards
 
-import { getCLS, getFID, getFCP, getLCP, getTTFB, onINP } from 'web-vitals';
+import { onCLS, onFID, onFCP, onLCP, onTTFB, onINP } from 'web-vitals';
 
 export interface WebVitalsMetric {
   id: string;
@@ -36,8 +36,8 @@ function getRating(name: WebVitalsMetric['name'], value: number): WebVitalsMetri
 async function sendMetric(metric: WebVitalsMetric) {
   try {
     // Option 1: Send to Google Analytics 4
-    if (typeof gtag !== 'undefined') {
-      gtag('event', metric.name, {
+    if (typeof window !== 'undefined' && typeof (window as any).gtag !== 'undefined') {
+      (window as any).gtag('event', metric.name, {
         event_category: 'Web Vitals',
         event_label: metric.id,
         value: Math.round(metric.value),
@@ -76,7 +76,7 @@ async function sendMetric(metric: WebVitalsMetric) {
 export function initWebVitals() {
   try {
     // Largest Contentful Paint (LCP) - measures loading performance
-    getLCP((metric) => {
+    onLCP((metric) => {
       const webVitalsMetric: WebVitalsMetric = {
         ...metric,
         rating: getRating('LCP', metric.value),
@@ -86,7 +86,7 @@ export function initWebVitals() {
     });
 
     // First Input Delay (FID) - measures interactivity (legacy)
-    getFID((metric) => {
+    onFID((metric) => {
       const webVitalsMetric: WebVitalsMetric = {
         ...metric,
         rating: getRating('FID', metric.value),
@@ -106,7 +106,7 @@ export function initWebVitals() {
     });
 
     // Cumulative Layout Shift (CLS) - measures visual stability
-    getCLS((metric) => {
+    onCLS((metric) => {
       const webVitalsMetric: WebVitalsMetric = {
         ...metric,
         rating: getRating('CLS', metric.value),
@@ -116,7 +116,7 @@ export function initWebVitals() {
     });
 
     // First Contentful Paint (FCP) - measures loading
-    getFCP((metric) => {
+    onFCP((metric) => {
       const webVitalsMetric: WebVitalsMetric = {
         ...metric,
         rating: getRating('FCP', metric.value),
@@ -126,7 +126,7 @@ export function initWebVitals() {
     });
 
     // Time to First Byte (TTFB) - measures server response
-    getTTFB((metric) => {
+    onTTFB((metric) => {
       const webVitalsMetric: WebVitalsMetric = {
         ...metric,
         rating: getRating('TTFB', metric.value),

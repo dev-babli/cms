@@ -247,7 +247,7 @@ export default function BlogList() {
                                     {/* Date Column */}
                                     <div className="col-span-2">
                                         <span className="text-sm text-[#6B7280]">
-                                            {formatDate(post.publish_date || post.created_at)}
+                                            {formatDate(post.publish_date || (post as any).created_at)}
                                         </span>
                                     </div>
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/server";
-import { db } from "@/lib/db";
+import { query, execute } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,17 +13,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const contentType = searchParams.get("type");
 
-    let query = "SELECT * FROM content_templates WHERE 1=1";
+    let sqlQuery = "SELECT * FROM content_templates WHERE 1=1";
     const params: any[] = [];
 
     if (contentType) {
-      query += " AND content_type = $1";
+      sqlQuery += " AND content_type = $1";
       params.push(contentType);
     }
 
-    query += " ORDER BY created_at DESC";
+    sqlQuery += " ORDER BY created_at DESC";
 
-    const result = await db.query(query, params);
+    const result = await query(sqlQuery, params);
 
     return NextResponse.json({
       success: true,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if table exists, create if not
-    await db.query(`
+    await execute(`
       CREATE TABLE IF NOT EXISTS content_templates (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       )
     `);
 
-    const result = await db.query(
+    const result = await query(
       `INSERT INTO content_templates (name, description, content_type, content, created_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
