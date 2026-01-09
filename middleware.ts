@@ -17,11 +17,11 @@ export function middleware(request: NextRequest) {
   // Note: 'unsafe-inline' needed for React, but should be minimized
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://vercel.live",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://www.google-analytics.com https://*.supabase.co",
+    "connect-src 'self' https://www.google-analytics.com https://*.supabase.co https://vercel.live",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
