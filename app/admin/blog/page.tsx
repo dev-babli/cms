@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { BlogPost } from "@/lib/cms/types";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/toast";
 
 export default function BlogList() {
     const router = useRouter();
+    const { showToast } = useToast();
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
@@ -104,14 +106,28 @@ export default function BlogList() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm("Are you sure you want to delete this post?")) return;
+        if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) return;
 
         try {
-            const res = await fetch(`/api/cms/blog/${id}`, { method: "DELETE" });
-            if (res.ok) {
-                fetchPosts();
+            const res = await fetch(`/api/cms/blog/${id}`, { 
+                method: "DELETE",
+                credentials: 'include',
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                showToast("Post deleted successfully", "success");
+                fetchPosts(); // Refresh the list
+            } else {
+                // Show error message from API
+                const errorMessage = data.error || data.message || `Failed to delete post (${res.status})`;
+                showToast(errorMessage, "error");
+                console.error("Failed to delete post:", data);
             }
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please check your connection.";
+            showToast(errorMessage, "error");
             console.error("Failed to delete post:", error);
         }
     };

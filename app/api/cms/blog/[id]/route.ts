@@ -164,14 +164,12 @@ export async function DELETE(
       return createErrorResponse('Invalid post ID', request, 400);
     }
     
-    // SECURITY: Verify delete permission
-    try {
-      verifyDeletePermission(user);
-    } catch (permissionError: any) {
-      return createErrorResponse(permissionError.message || 'Permission denied', request, 403);
+    // SECURITY: Verify delete permission (only admins and editors can delete)
+    if (!['admin', 'editor'].includes(user.role)) {
+      return createErrorResponse('Only admins and editors can delete posts', request, 403);
     }
     
-    // SECURITY: Verify ownership to prevent IDOR attacks
+    // SECURITY: Verify post exists
     const allPosts = await blogPosts.getAll(false);
     const existingPost = allPosts.find((p: any) => p.id === id);
     
@@ -179,11 +177,8 @@ export async function DELETE(
       return createErrorResponse('Post not found', request, 404);
     }
     
-    try {
-      verifyOwnership(user, existingPost);
-    } catch (ownershipError: any) {
-      return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
-    }
+    // Admins and editors can delete any post, no ownership check needed
+    // Authors cannot delete posts (already checked above)
     
     const result = await blogPosts.delete(id);
     return createSecureResponse({ success: true, data: result }, request);
