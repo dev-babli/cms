@@ -120,6 +120,7 @@ export default function NewTeamMember() {
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
+                credentials: 'include' // Include authentication cookies
             });
 
             const contentType = res.headers.get('content-type');

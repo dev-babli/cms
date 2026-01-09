@@ -128,3 +128,15 @@ export function ShortcutsPanel({ onClose }: ShortcutsPanelProps) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

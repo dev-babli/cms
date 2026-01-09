@@ -5,26 +5,27 @@ export const BlogPostSchema = z.object({
   id: z.number().optional(),
   slug: z.string().min(1),
   title: z.string().min(1),
-  excerpt: z.string().optional(),
-  content: z.string().optional(),
-  author: z.string().optional(),
-  featured_image: z.string().optional(),
-  category: z.string().optional(),
-  tags: z.string().optional(),
+  excerpt: z.string().nullish(),
+  content: z.string().nullish(),
+  author: z.string().nullish(),
+  featured_image: z.string().nullish(),
+  banner_image: z.string().nullish(),
+  category: z.string().nullish(),
+  tags: z.string().nullish(),
   published: z.boolean().default(false),
-  publish_date: z.string().optional(),
-  scheduled_publish_date: z.string().optional(),
-  // SEO Fields
-  meta_title: z.string().optional(),
-  meta_description: z.string().optional(),
-  meta_keywords: z.string().optional(),
-  canonical_url: z.string().optional(),
-  og_title: z.string().optional(),
-  og_description: z.string().optional(),
-  og_image: z.string().optional(),
-  og_type: z.string().optional(),
-  schema_markup: z.string().optional(),
-  custom_tracking_script: z.string().optional(),
+  publish_date: z.string().nullish(),
+  scheduled_publish_date: z.string().nullish(),
+  // SEO Fields - Allow null values
+  meta_title: z.string().nullish(),
+  meta_description: z.string().nullish(),
+  meta_keywords: z.string().nullish(),
+  canonical_url: z.string().nullish(),
+  og_title: z.string().nullish(),
+  og_description: z.string().nullish(),
+  og_image: z.string().nullish(),
+  og_type: z.string().nullish(),
+  schema_markup: z.string().nullish(),
+  custom_tracking_script: z.string().nullish(),
 });
 
 export type BlogPost = z.infer<typeof BlogPostSchema>;
@@ -129,7 +130,7 @@ export const EbookSchema = z.object({
   pdf_url: z.string().optional(),
   pdf_size: z.number().optional(),
   author: z.string().optional(),
-  category_id: z.number().optional(),
+  category_id: z.number().nullable().optional(),
   category_ids: z.string().optional(), // JSON array
   tags: z.string().optional(),
   featured: z.boolean().default(false),
@@ -172,7 +173,7 @@ export const CaseStudySchema = z.object({
   solution: z.string().optional(),
   results: z.string().optional(),
   testimonial: z.string().optional(),
-  category_id: z.number().optional(),
+  category_id: z.number().nullable().optional(),
   category_ids: z.string().optional(),
   tags: z.string().optional(),
   featured: z.boolean().default(false),
@@ -197,77 +198,61 @@ export const CaseStudySchema = z.object({
 
 export type CaseStudy = z.infer<typeof CaseStudySchema>;
 
-// Whitepaper Schema
-export const WhitepaperSchema = z.object({
-  id: z.number().optional(),
-  slug: z.string().min(1),
-  title: z.string().min(1),
-  excerpt: z.string().optional(),
-  description: z.string().optional(),
-  content: z.string().optional(),
-  cover_image: z.string().optional(),
-  pdf_url: z.string().min(1), // Required for whitepapers
-  pdf_size: z.number().optional(),
-  author: z.string().optional(),
-  pages: z.number().optional(),
-  reading_time: z.number().optional(),
-  category_id: z.number().optional(),
-  category_ids: z.string().optional(),
-  tags: z.string().optional(),
-  featured: z.boolean().default(false),
-  gated: z.boolean().default(true),
-  download_count: z.number().default(0),
-  published: z.boolean().default(false),
-  publish_date: z.string().optional(),
-  scheduled_publish_date: z.string().optional(),
-  meta_title: z.string().optional(),
-  meta_description: z.string().optional(),
-  meta_keywords: z.string().optional(),
-  canonical_url: z.string().optional(),
-  og_title: z.string().optional(),
-  og_description: z.string().optional(),
-  og_image: z.string().optional(),
-  og_type: z.string().optional(),
-  schema_markup: z.string().optional(),
-  google_analytics_id: z.string().optional(),
-  custom_tracking_script: z.string().optional(),
-  created_by: z.number().optional(),
-});
-
-export type Whitepaper = z.infer<typeof WhitepaperSchema>;
 
 // Lead Schema
 export const LeadSchema = z.object({
   id: z.number().optional(),
   first_name: z.string().min(1),
-  last_name: z.string().optional(),
+  last_name: z.string().nullish(),
   email: z.string().email(),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  job_title: z.string().optional(),
-  role: z.string().optional(),
-  industry: z.string().optional(),
-  content_type: z.enum(['ebook', 'case_study', 'whitepaper']),
-  content_id: z.number(),
-  content_title: z.string().optional(),
-  lead_source: z.string().optional(),
-  campaign: z.string().optional(),
-  medium: z.string().optional(),
-  referrer: z.string().optional(),
-  utm_source: z.string().optional(),
-  utm_medium: z.string().optional(),
-  utm_campaign: z.string().optional(),
-  utm_term: z.string().optional(),
-  utm_content: z.string().optional(),
+  phone: z.string().nullish(),
+  company: z.string().nullish(),
+  job_title: z.string().nullish(),
+  role: z.string().nullish(),
+  industry: z.string().nullish(),
+  content_type: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return null;
+      return val;
+    },
+    z.union([
+      z.enum(['ebook', 'case_study']),
+      z.null()
+    ]).optional()
+  ), // Optional for contact form submissions
+  content_id: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return null;
+      if (typeof val === 'string') {
+        const parsed = parseInt(val, 10);
+        return isNaN(parsed) ? null : parsed;
+      }
+      return val;
+    },
+    z.union([
+      z.number().int(),
+      z.null()
+    ]).optional()
+  ), // Optional for contact form submissions
+  content_title: z.string().nullish(),
+  lead_source: z.string().nullish(),
+  campaign: z.string().nullish(),
+  medium: z.string().nullish(),
+  referrer: z.string().nullish(),
+  utm_source: z.string().nullish(),
+  utm_medium: z.string().nullish(),
+  utm_campaign: z.string().nullish(),
+  utm_term: z.string().nullish(),
+  utm_content: z.string().nullish(),
   status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']).default('new'),
-  notes: z.string().optional(),
-  assigned_to: z.number().optional(),
-  crm_id: z.string().optional(),
+  notes: z.string().nullish(),
+  assigned_to: z.number().nullish(),
+  crm_id: z.string().nullish(),
   crm_synced: z.boolean().default(false),
   consent_marketing: z.boolean().default(false),
   consent_data_processing: z.boolean().default(true),
-  ip_address: z.string().optional(),
-  user_agent: z.string().optional(),
+  ip_address: z.string().nullish(),
+  user_agent: z.string().nullish(),
 });
 
 export type Lead = z.infer<typeof LeadSchema>;
@@ -278,7 +263,7 @@ export const CategorySchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   description: z.string().optional(),
-  content_type: z.enum(['blog', 'ebook', 'case_study', 'whitepaper', 'all']).default('blog'),
+  content_type: z.enum(['blog', 'ebook', 'case_study', 'all']).default('blog'),
   color: z.string().optional(),
   icon: z.string().optional(),
   order_index: z.number().default(0),
@@ -287,7 +272,20 @@ export const CategorySchema = z.object({
 
 export type Category = z.infer<typeof CategorySchema>;
 
+// News & Announcements Schema
+export const NewsSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1),
+  slug: z.string().min(1),
+  content: z.string().optional(),
+  excerpt: z.string().optional(),
+  featured_image: z.string().optional(),
+  published: z.boolean().default(false),
+  publish_date: z.string().optional(),
+  author: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
 
-
-
+export type News = z.infer<typeof NewsSchema>;
 

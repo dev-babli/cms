@@ -19,40 +19,85 @@ export default function BlogList() {
 
     const checkAuth = async () => {
         try {
-            const res = await fetch("/api/auth/check");
+            const res = await fetch("/api/auth/check", {
+                credentials: 'include',
+            });
             if (res.ok) {
                 setAuthenticated(true);
                 fetchUserRole();
                 fetchPosts();
             } else {
-                router.push("/auth/login");
+                // Only redirect if we get a clear auth error
+                if (res.status === 401 || res.status === 403) {
+                    router.push("/auth/login");
+                } else {
+                    // For other errors, still try to load (might be temporary)
+                    setAuthenticated(true);
+                    fetchPosts();
+                }
             }
         } catch (error) {
-            router.push("/auth/login");
+            console.error("Auth check failed:", error);
+            // Don't immediately redirect on network errors
+            // Let the user see the page, it will show loading state
+            setAuthenticated(false);
+            setLoading(false);
         }
     };
 
     const fetchUserRole = async () => {
         try {
             const res = await fetch("/api/auth/me");
+            if (!res.ok) {
+                return; // Silently fail if auth check fails
+            }
             const data = await res.json();
             if (data.success && data.data?.user) {
                 setUserRole(data.data.user.role || 'viewer');
             }
         } catch (error) {
+            // Silently handle error - user role will default to 'viewer'
             console.error("Failed to fetch user role:", error);
         }
     };
 
     const fetchPosts = async () => {
         try {
-            const res = await fetch("/api/cms/blog");
+            setLoading(true);
+            const res = await fetch("/api/cms/blog", {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (!res.ok) {
+                // If we get a 401, redirect to login
+                if (res.status === 401) {
+                    router.push("/auth/login");
+                    return;
+                }
+                // For other errors, try to parse the error message
+                try {
+                    const errorData = await res.json();
+                    console.error("API returned error:", errorData.error || `HTTP ${res.status}`);
+                } catch {
+                    console.error(`HTTP error! status: ${res.status}`);
+                }
+                setPosts([]);
+                return;
+            }
+            
             const data = await res.json();
             if (data.success) {
-                setPosts(data.data);
+                setPosts(data.data || []);
+            } else {
+                console.error("API returned error:", data.error);
+                setPosts([]);
             }
         } catch (error) {
             console.error("Failed to fetch posts:", error);
+            setPosts([]);
         } finally {
             setLoading(false);
         }
@@ -96,203 +141,178 @@ export default function BlogList() {
 
     if (!authenticated || loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-slate-600">Loading blog posts...</p>
+            <div className="p-6">
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                        <div className="w-8 h-8 border-2 border-[#E5E7EB] border-t-[#3B82F6] rounded-full animate-spin mx-auto mb-3"></div>
+                        <p className="text-sm text-[#6B7280]">Loading blog posts...</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
-            {/* Premium Header with Glass Morphism */}
-            <header className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/admin"
-                                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors group"
-                            >
-                                <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                Dashboard
-                            </Link>
-                            <div className="h-6 w-px bg-slate-300"></div>
-                            <div>
-                                <h1 className="text-2xl font-bold gradient-text">Blog Posts</h1>
-                                <p className="text-sm text-slate-600 font-medium">{posts.length} {posts.length === 1 ? 'post' : 'posts'} total</p>
-                            </div>
-                        </div>
-                        <Link href="/admin/blog/new">
-                            <Button size="lg" className="btn-premium">
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                New Post
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
-            </header>
+    const formatDate = (dateString: string | null | undefined) => {
+        if (!dateString) return '—';
+        try {
+            const date = new Date(dateString);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                return '—';
+            }
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (error) {
+            // Silently handle date parsing errors
+            return '—';
+        }
+    };
 
-            {/* Content */}
-            <div className="max-w-7xl mx-auto px-6 py-12">
-                {posts.length === 0 ? (
-                    <div className="premium-card-gradient p-16 text-center">
-                        <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30 pulse-glow">
-                            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    return (
+        <div className="p-6">
+            {/* Page Header - Sanity Style */}
+            <div className="mb-6 flex items-center justify-between">
+                <div>
+                    <h1 className="text-[18px] font-medium text-[#111827] mb-1">Blog Posts</h1>
+                    <p className="text-sm text-[#6B7280]">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</p>
+                </div>
+                <Link href="/admin/blog/new">
+                    <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Post
+                    </button>
+                </Link>
+            </div>
+
+            {/* List View - Row-based, High Density */}
+            {posts.length === 0 ? (
+                <div className="border border-[#E5E7EB] rounded-md bg-white p-12 text-center">
+                    <svg className="w-12 h-12 text-[#9CA3AF] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <h3 className="text-sm font-medium text-[#111827] mb-2">No posts yet</h3>
+                    <p className="text-sm text-[#6B7280] mb-6">Get started by creating your first blog post</p>
+                    <Link href="/admin/blog/new">
+                        <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
+                            Create Post
+                        </button>
+                    </Link>
+                </div>
+            ) : (
+                <div className="border border-[#E5E7EB] rounded-md bg-white">
+                    {/* Table Header */}
+                    <div className="border-b border-[#E5E7EB] bg-[#F9FAFB] px-4 py-2">
+                        <div className="grid grid-cols-12 gap-4 text-xs font-medium text-[#6B7280] uppercase tracking-wide">
+                            <div className="col-span-5">Title</div>
+                            <div className="col-span-2">Author</div>
+                            <div className="col-span-2">Date</div>
+                            <div className="col-span-1">Status</div>
+                            <div className="col-span-2 text-right">Actions</div>
                         </div>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-3">No posts yet</h3>
-                        <p className="text-lg text-slate-600 mb-8 font-medium">Get started by creating your first blog post</p>
-                        <Link href="/admin/blog/new">
-                            <Button size="lg" className="btn-premium text-lg px-8 py-4">
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Create Your First Post
-                            </Button>
-                        </Link>
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    {/* Table Rows - High Density */}
+                    <div className="divide-y divide-[#E5E7EB]">
                         {posts.map((post) => (
                             <div
                                 key={post.id}
-                                className="group premium-card-gradient overflow-hidden hover-lift"
+                                className="px-4 py-3 hover:bg-[#F9FAFB] transition-colors duration-150 ease-out"
                             >
-                                {/* Featured Image */}
-                                {post.featured_image && (
-                                    <div className="relative h-48 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
-                                        <img
-                                            src={post.featured_image}
-                                            alt={post.title}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                        />
-                                        <div className="absolute top-4 right-4 flex gap-2">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm border ${post.published
-                                                        ? "bg-green-500/90 text-white border-green-400"
-                                                        : "bg-yellow-500/90 text-white border-yellow-400"
-                                                    }`}
-                                            >
-                                                {post.published ? "Published" : "Draft"}
-                                            </span>
-                                            {/* Show "Pending Review" badge for unpublished posts when editor/admin */}
-                                            {!post.published && (userRole === 'editor' || userRole === 'admin') && (
-                                                <span className="px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm bg-orange-500/90 text-white border border-orange-400">
-                                                    Pending Review
-                                                </span>
-                                            )}
-                                        </div>
+                                <div className="grid grid-cols-12 gap-4 items-center">
+                                    {/* Title Column */}
+                                    <div className="col-span-5 min-w-0">
+                                        <Link href={`/admin/blog/edit/${post.id}`}>
+                                            <h3 className="text-sm font-medium text-[#111827] truncate hover:text-[#3B82F6] transition-colors duration-150">
+                                                {post.title || 'Untitled'}
+                                            </h3>
+                                        </Link>
+                                        {post.excerpt && (
+                                            <p className="text-xs text-[#6B7280] truncate mt-0.5">
+                                                {post.excerpt}
+                                            </p>
+                                        )}
                                     </div>
-                                )}
 
-                                <div className="p-6">
-                                    {/* Category Badge */}
-                                    {post.category && (
-                                        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold mb-3">
-                                            {post.category}
+                                    {/* Author Column */}
+                                    <div className="col-span-2">
+                                        <span className="text-sm text-[#6B7280]">
+                                            {post.author || '—'}
                                         </span>
-                                    )}
-
-                                    {/* Title */}
-                                    <h3 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
-                                        {post.title}
-                                    </h3>
-
-                                    {/* Excerpt */}
-                                    {post.excerpt && (
-                                        <p className="text-slate-600 text-sm mb-4 line-clamp-3 leading-relaxed">
-                                            {post.excerpt}
-                                        </p>
-                                    )}
-
-                                    {/* Meta Info */}
-                                    <div className="flex items-center justify-between text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">
-                                        <div className="flex items-center gap-2">
-                                            {post.author && (
-                                                <>
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                    </svg>
-                                                    <span>{post.author}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                        <span className="text-slate-400">/blog/{post.slug}</span>
                                     </div>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <Link
-                                            href={`/admin/blog/edit/${post.id}`}
-                                            className="flex-1 min-w-[100px]"
+                                    {/* Date Column */}
+                                    <div className="col-span-2">
+                                        <span className="text-sm text-[#6B7280]">
+                                            {formatDate(post.publish_date || post.created_at)}
+                                        </span>
+                                    </div>
+
+                                    {/* Status Column */}
+                                    <div className="col-span-1">
+                                        <span
+                                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                                post.published
+                                                    ? 'bg-[#D1FAE5] text-[#065F46]'
+                                                    : 'bg-[#FEF3C7] text-[#92400E]'
+                                            }`}
                                         >
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                            {post.published ? 'Published' : 'Draft'}
+                                        </span>
+                                    </div>
+
+                                    {/* Actions Column */}
+                                    <div className="col-span-2 flex items-center justify-end gap-2">
+                                        <Link href={`/admin/blog/edit/${post.id}`}>
+                                            <button
+                                                className="p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
+                                                title="Edit"
                                             >
-                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
-                                                Edit
-                                            </Button>
+                                            </button>
                                         </Link>
-
-                                        {/* Approve button - only for editors/admins on unpublished posts */}
-                                        {!post.published && (userRole === 'editor' || userRole === 'admin') && (
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handleApprove(post.id!)}
-                                                className="flex-1 min-w-[100px] bg-green-600 hover:bg-green-700 text-white"
+                                        <Link href={`/blog/${post.slug}`} target="_blank">
+                                            <button
+                                                className="p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
+                                                title="View"
                                             >
-                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                Approve
-                                            </Button>
-                                        )}
-
-                                        <Link
-                                            href={`/blog/${post.slug}`}
-                                            target="_blank"
-                                            className="flex-1 min-w-[100px]"
-                                        >
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full border-slate-300 hover:border-green-500 hover:text-green-600 hover:bg-green-50"
-                                            >
-                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                 </svg>
-                                                View
-                                            </Button>
+                                            </button>
                                         </Link>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
+                                        {!post.published && (userRole === 'editor' || userRole === 'admin') && (
+                                            <button
+                                                onClick={() => handleApprove(post.id!)}
+                                                className="p-1.5 text-[#059669] hover:text-[#047857] hover:bg-[#D1FAE5] rounded transition-colors duration-150 ease-out"
+                                                title="Approve"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                        <button
                                             onClick={() => handleDelete(post.id!)}
-                                            className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                                            className="p-1.5 text-[#6B7280] hover:text-[#EF4444] hover:bg-[#FEE2E2] rounded transition-colors duration-150 ease-out"
+                                            title="Delete"
                                         >
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
-                                        </Button>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -100,6 +100,15 @@ export const blogPostSchema: Schema = {
       },
     },
     {
+      name: 'banner_image',
+      type: 'image',
+      title: 'Banner Image (Hero Section)',
+      description: 'Full-width hero banner image for the blog post',
+      options: {
+        hotspot: true,
+      },
+    },
+    {
       name: 'author',
       type: 'reference',
       title: 'Author',

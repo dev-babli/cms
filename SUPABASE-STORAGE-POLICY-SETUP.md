@@ -24,8 +24,10 @@ This guide will walk you through setting up the `cms-media` bucket in Supabase S
      - **File size limit**: Leave default or set to 50MB
      - **Allowed MIME types**: Leave empty (allows all types) OR specify:
        ```
-       image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime
+       image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-msvideo,application/pdf
        ```
+       
+       **Important for PDFs**: If you plan to upload PDFs, make sure to include `application/pdf` in the allowed MIME types. Alternatively, leave this field empty to allow all file types.
    - Click **"Create bucket"**
 
 ---

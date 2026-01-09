@@ -131,7 +131,11 @@ export default function NewCaseStudy() {
             formDataUpload.append("file", file);
             formDataUpload.append("type", "pdf");
 
-            const res = await fetch("/api/upload", { method: "POST", body: formDataUpload });
+            const res = await fetch("/api/upload", { 
+                method: "POST", 
+                body: formDataUpload,
+                credentials: 'include' // Include authentication cookies
+            });
             const data = await res.json();
             if (data.success && data.data) {
                 setFormData(prev => ({ ...prev, pdf_url: data.data.url, pdf_size: data.data.size }));
@@ -155,7 +159,11 @@ export default function NewCaseStudy() {
             formDataUpload.append("file", file);
             formDataUpload.append("type", "image");
 
-            const res = await fetch("/api/upload", { method: "POST", body: formDataUpload });
+            const res = await fetch("/api/upload", { 
+                method: "POST", 
+                body: formDataUpload,
+                credentials: 'include' // Include authentication cookies
+            });
             const data = await res.json();
             if (data.success && data.data) {
                 setFormData(prev => ({ ...prev, [field]: data.data.url }));

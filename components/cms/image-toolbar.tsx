@@ -116,3 +116,15 @@ export function ImageToolbar({ editor, onClose }: ImageToolbarProps) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+

@@ -62,13 +62,30 @@ export default function MediaPage() {
             if (searchQuery) queryParams.append('search', searchQuery);
 
             const res = await fetch(`/api/admin/media?${queryParams}`);
-            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            
+            const responseText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error("Failed to parse media response:", parseError);
+                setMedia([]);
+                return;
+            }
 
             if (data.success) {
-                setMedia(data.data);
+                setMedia(data.data || []);
+            } else {
+                console.error("API returned error:", data.error);
+                setMedia([]);
             }
         } catch (error) {
             console.error("Failed to fetch media:", error);
+            setMedia([]);
         } finally {
             setLoading(false);
         }
@@ -86,21 +103,50 @@ export default function MediaPage() {
             const res = await fetch('/api/admin/media', {
                 method: 'POST',
                 body: formData,
+                credentials: 'include' // Include authentication cookies
             });
 
             if (!res.ok) {
-                let errorMessage = 'Upload failed';
+                let errorMessage = `Upload failed (${res.status})`;
                 try {
-                    const errorData = await res.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch {
-                    errorMessage = res.statusText || errorMessage;
+                    // Try to read error response
+                    const contentType = res.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await res.json();
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                    } else {
+                        const errorText = await res.text();
+                        if (errorText && errorText.trim()) {
+                            // Try to parse as JSON even if content-type doesn't say so
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                errorMessage = errorData.error || errorData.message || errorMessage;
+                            } catch {
+                                errorMessage = errorText.substring(0, 200) || res.statusText || errorMessage;
+                            }
+                        } else {
+                            errorMessage = res.statusText || `HTTP ${res.status}` || errorMessage;
+                        }
+                    }
+                } catch (error: any) {
+                    // If we can't read the response, use status info
+                    errorMessage = res.statusText || `HTTP ${res.status}` || 'Network error occurred';
+                    console.error("Error reading error response:", error?.message || error);
                 }
                 alert(`Upload failed: ${errorMessage}`);
                 return;
             }
 
-            const data = await res.json();
+            const responseText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error("Failed to parse response:", parseError);
+                alert('Upload completed but received invalid response from server');
+                fetchMedia(); // Refresh the media list
+                return;
+            }
 
             if (data.success && data.data) {
                 setMedia(prev => [...data.data, ...prev]);

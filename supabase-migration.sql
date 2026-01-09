@@ -25,10 +25,23 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   content TEXT,
   author TEXT,
   featured_image TEXT,
+  banner_image TEXT,
   category TEXT,
   tags TEXT,
   published BOOLEAN DEFAULT false,
   publish_date TIMESTAMP,
+  scheduled_publish_date TIMESTAMP,
+  -- SEO Fields
+  meta_title TEXT,
+  meta_description TEXT,
+  meta_keywords TEXT,
+  canonical_url TEXT,
+  og_title TEXT,
+  og_description TEXT,
+  og_image TEXT,
+  og_type TEXT DEFAULT 'article',
+  schema_markup TEXT,
+  custom_tracking_script TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

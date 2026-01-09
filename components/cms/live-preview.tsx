@@ -22,7 +22,7 @@ export function LivePreview({ content, schema }: LivePreviewProps) {
     const renderPreview = () => {
         if (schema === 'post') {
             return (
-                <article className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <article className="bg-white overflow-hidden">
                     {content.featured_image && (
                         <img
                             src={content.featured_image}
@@ -32,26 +32,26 @@ export function LivePreview({ content, schema }: LivePreviewProps) {
                     )}
                     <div className="p-8">
                         {content.category && (
-                            <span className="inline-block px-3 py-1 bg-turquoise/10 text-turquoise rounded-full text-xs font-semibold mb-4">
+                            <span className="inline-block px-2 py-1 bg-[#F9FAFB] text-[#6B7280] rounded text-xs font-medium mb-4">
                                 {content.category}
                             </span>
                         )}
-                        <h1 className="text-4xl font-bold mb-4">{content.title || 'Untitled Post'}</h1>
+                        <h1 className="text-2xl font-semibold mb-4 text-[#111827]">{content.title || 'Untitled Post'}</h1>
                         {content.excerpt && (
-                            <p className="text-muted-foreground text-lg mb-6">{content.excerpt}</p>
+                            <p className="text-[#6B7280] text-sm mb-6">{content.excerpt}</p>
                         )}
                         <div
-                            className="prose prose-lg max-w-none"
+                            className="prose prose-sm max-w-none text-[#111827]"
                             dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(content.content || '<p>Start writing...</p>') }}
                         />
                         {content.author && (
-                            <div className="mt-8 pt-6 border-t flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-turquoise to-sky-blue rounded-full flex items-center justify-center text-white font-bold">
+                            <div className="mt-8 pt-6 border-t border-[#E5E7EB] flex items-center gap-3">
+                                <div className="w-10 h-10 bg-[#F3F4F6] rounded-full flex items-center justify-center text-[#6B7280] text-sm font-medium">
                                     {content.author[0]}
                                 </div>
                                 <div>
-                                    <p className="font-semibold">{content.author}</p>
-                                    <p className="text-sm text-muted-foreground">Author</p>
+                                    <p className="text-sm font-medium text-[#111827]">{content.author}</p>
+                                    <p className="text-xs text-[#6B7280]">Author</p>
                                 </div>
                             </div>
                         )}
@@ -60,63 +60,63 @@ export function LivePreview({ content, schema }: LivePreviewProps) {
             );
         }
 
-        return <div className="p-8 text-center text-muted-foreground">Preview not available</div>;
+        return <div className="p-8 text-center text-[#6B7280] text-sm">Preview not available</div>;
     };
 
     return (
         <div className="h-full flex flex-col bg-muted/30">
-            {/* Preview Controls */}
-            <div className="flex items-center justify-between p-4 bg-white border-b">
-                <div className="flex items-center gap-2">
+            {/* Preview Controls - Sanity style */}
+            <div className="flex items-center justify-between p-3 bg-white border-b border-[#E5E7EB]">
+                <div className="flex items-center gap-1">
                     <button
                         onClick={() => setDevice('desktop')}
-                        className={`p-2 rounded-lg transition-colors ${device === 'desktop' ? 'bg-turquoise text-white' : 'hover:bg-muted'
+                        className={`p-1.5 rounded transition-colors duration-150 ${device === 'desktop' ? 'bg-[#F3F4F6] text-[#111827]' : 'text-[#6B7280] hover:bg-[#F9FAFB]'
                             }`}
                         title="Desktop"
                     >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </button>
                     <button
                         onClick={() => setDevice('tablet')}
-                        className={`p-2 rounded-lg transition-colors ${device === 'tablet' ? 'bg-turquoise text-white' : 'hover:bg-muted'
+                        className={`p-1.5 rounded transition-colors duration-150 ${device === 'tablet' ? 'bg-[#F3F4F6] text-[#111827]' : 'text-[#6B7280] hover:bg-[#F9FAFB]'
                             }`}
                         title="Tablet"
                     >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </button>
                     <button
                         onClick={() => setDevice('mobile')}
-                        className={`p-2 rounded-lg transition-colors ${device === 'mobile' ? 'bg-turquoise text-white' : 'hover:bg-muted'
+                        className={`p-1.5 rounded transition-colors duration-150 ${device === 'mobile' ? 'bg-[#F3F4F6] text-[#111827]' : 'text-[#6B7280] hover:bg-[#F9FAFB]'
                             }`}
                         title="Mobile"
                     >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </button>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Live Preview</span>
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-[#6B7280]">Live Preview</span>
+                    <div className="w-1.5 h-1.5 bg-[#10B981] rounded-full" />
                 </div>
             </div>
 
-            {/* Preview Area */}
-            <div className="flex-1 overflow-auto p-6 flex items-start justify-center">
+            {/* Preview Area - Sanity style */}
+            <div className="flex-1 overflow-auto p-4 flex items-start justify-center bg-[#F9FAFB]">
                 <motion.div
                     key={device}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
                     className={`${deviceSizes[device]} mx-auto transition-all`}
                 >
-                    <div className="bg-gray-100 rounded-xl p-4 shadow-2xl">
-                        <div className="bg-white rounded-lg overflow-hidden" style={{ minHeight: '600px' }}>
+                    <div className="bg-[#E5E7EB] p-2 rounded-md">
+                        <div className="bg-white overflow-hidden" style={{ minHeight: '600px' }}>
                             {renderPreview()}
                         </div>
                     </div>

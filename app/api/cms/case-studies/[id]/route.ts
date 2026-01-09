@@ -3,6 +3,10 @@ import { caseStudies } from '@/lib/cms/api';
 import { CaseStudySchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
+import { getCurrentUser } from '@/lib/auth/server';
+import { verifyOwnership, verifyDeletePermission } from '@/lib/auth/ownership';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -12,20 +16,11 @@ export async function GET(
     const { id } = await params;
     const item = await caseStudies.getBySlug(id);
     if (!item) {
-      return NextResponse.json(
-        { success: false, error: 'Case study not found' },
-        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      return createErrorResponse('Case study not found', request, 404);
     }
-    return NextResponse.json(
-      { success: true, data: item },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: item }, request);
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch case study' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -34,6 +29,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for updating case studies
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can update case studies
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { id } = await params;
     const body = await request.json();
     const validated = CaseStudySchema.partial().parse(body);
@@ -63,23 +69,31 @@ export async function PUT(
       }
     });
     
+    // SECURITY: Verify ownership to prevent IDOR attacks
+    const allCaseStudies = await caseStudies.getAll(false);
+    const existingCaseStudy = allCaseStudies.find((cs: any) => cs.id === parseInt(id));
+    
+    if (!existingCaseStudy) {
+      return createErrorResponse('Case study not found', request, 404);
+    }
+    
+    try {
+      verifyOwnership(user, existingCaseStudy);
+    } catch (ownershipError: any) {
+      return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
+    }
+    
     const result = await caseStudies.update(parseInt(id), sanitized);
     
-    return NextResponse.json(
-      { success: true, data: (result as any).row || result },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: (result as any).row || result }, request);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Validation failed' },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      const errorMessages = error.issues.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
     }
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update case study' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -88,28 +102,45 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for deleting case studies
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Verify delete permission
+    try {
+      verifyDeletePermission(user);
+    } catch (permissionError: any) {
+      return createErrorResponse(permissionError.message || 'Permission denied', request, 403);
+    }
+    
     const { id } = await params;
-    await caseStudies.delete(parseInt(id));
-    return NextResponse.json(
-      { success: true },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    const caseStudyId = parseInt(id);
+    
+    // SECURITY: Verify ownership to prevent IDOR attacks
+    const allCaseStudies = await caseStudies.getAll(false);
+    const existingCaseStudy = allCaseStudies.find((cs: any) => cs.id === caseStudyId);
+    
+    if (!existingCaseStudy) {
+      return createErrorResponse('Case study not found', request, 404);
+    }
+    
+    try {
+      verifyOwnership(user, existingCaseStudy);
+    } catch (ownershipError: any) {
+      return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
+    }
+    
+    await caseStudies.delete(caseStudyId);
+    return createSecureResponse({ success: true }, request);
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete case study' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
+
 

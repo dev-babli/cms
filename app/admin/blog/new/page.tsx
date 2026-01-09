@@ -25,6 +25,7 @@ export default function NewBlogPost() {
         content: "",
         author: "",
         featured_image: "",
+        banner_image: "",
         category: "",
         tags: "",
         published: false, // Default to draft - user can publish when ready
@@ -185,7 +186,7 @@ export default function NewBlogPost() {
             .replace(/(^-|-$)/g, "");
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'featured_image' | 'banner_image' = 'featured_image') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -198,6 +199,7 @@ export default function NewBlogPost() {
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
+                credentials: 'include' // Include authentication cookies
             });
 
             // Check content type before parsing
@@ -221,7 +223,7 @@ export default function NewBlogPost() {
                 }
 
                 if (data.success && data.data) {
-                    setFormData(prev => ({ ...prev, featured_image: data.data.url }));
+                    setFormData(prev => ({ ...prev, [field]: data.data.url }));
                 } else {
                     alert(`Upload failed: ${data.error || 'Unknown error'}`);
                 }
@@ -294,6 +296,7 @@ export default function NewBlogPost() {
                                         category: formData.category,
                                         tags: formData.tags,
                                         featured_image: formData.featured_image,
+                                        banner_image: formData.banner_image,
                                     }));
                                     const previewUrl = `/admin/blog/preview?data=${previewData}`;
                                     window.open(previewUrl, '_blank');
@@ -411,7 +414,7 @@ export default function NewBlogPost() {
                                             id="change-image-input"
                                             type="file"
                                             accept="image/*"
-                                            onChange={handleImageUpload}
+                                            onChange={(e) => handleImageUpload(e, 'featured_image')}
                                             className="hidden"
                                             disabled={uploadingImage}
                                         />
@@ -447,7 +450,7 @@ export default function NewBlogPost() {
                                         id="featured-image-input"
                                         type="file"
                                         accept="image/*"
-                                        onChange={handleImageUpload}
+                                        onChange={(e) => handleImageUpload(e, 'featured_image')}
                                         className="hidden"
                                         disabled={uploadingImage}
                                     />
@@ -481,9 +484,124 @@ export default function NewBlogPost() {
                                             id="url-image-input"
                                             type="file"
                                             accept="image/*"
-                                            onChange={handleImageUpload}
+                                            onChange={(e) => handleImageUpload(e, 'featured_image')}
                                             className="hidden"
                                             disabled={uploadingImage}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Banner Image */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-medium">Banner Image (Hero Section)</Label>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-md border border-purple-200">
+                                        📐 Recommended: 1920×600px (Full Width Banner)
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Displays above title in blog post
+                                    </span>
+                                </div>
+                            </div>
+
+                            {formData.banner_image ? (
+                                <div className="space-y-3">
+                                    <div className="rounded-lg overflow-hidden border">
+                                        <img
+                                            src={formData.banner_image}
+                                            alt="Banner Preview"
+                                            className="w-full h-48 object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setFormData({ ...formData, banner_image: "" })}
+                                        >
+                                            Remove
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={uploadingImage}
+                                            onClick={() => document.getElementById('change-banner-input')?.click()}
+                                        >
+                                            {uploadingImage ? "Uploading..." : "Change Image"}
+                                        </Button>
+                                        <input
+                                            id="change-banner-input"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                if (e.target.files?.[0]) {
+                                                    handleImageUpload(e, 'banner_image');
+                                                }
+                                            }}
+                                            className="hidden"
+                                            disabled={uploadingImage}
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full h-24 border-dashed"
+                                        disabled={uploadingImage}
+                                        onClick={() => document.getElementById('banner-image-input')?.click()}
+                                    >
+                                        <span className="flex flex-col items-center justify-center gap-2">
+                                            {uploadingImage ? (
+                                                <>
+                                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                    <span className="text-sm">Uploading...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span className="text-sm font-medium">Upload Banner Image</span>
+                                                    <span className="text-xs text-muted-foreground">Optional - Full width hero image</span>
+                                                </>
+                                            )}
+                                        </span>
+                                    </Button>
+                                    <input
+                                        id="banner-image-input"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) {
+                                                handleImageUpload(e, 'banner_image');
+                                            }
+                                        }}
+                                        className="hidden"
+                                        disabled={uploadingImage}
+                                    />
+
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t"></div>
+                                        </div>
+                                        <div className="relative flex justify-center text-xs">
+                                            <span className="px-2 bg-white text-muted-foreground">or paste URL</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={formData.banner_image}
+                                            onChange={(e) => setFormData({ ...formData, banner_image: e.target.value })}
+                                            placeholder="https://images.unsplash.com/..."
+                                            className="h-10 flex-1"
                                         />
                                     </div>
                                 </div>

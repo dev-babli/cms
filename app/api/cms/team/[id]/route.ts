@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { teamMembers } from '@/lib/cms/api';
 import { TeamMemberSchema } from '@/lib/cms/types';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
+import { z } from 'zod';
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: corsHeaders,
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function GET(
@@ -29,27 +24,12 @@ export async function GET(
     const member = allMembers.find((m: any) => m.id === id);
     
     if (!member) {
-      return NextResponse.json(
-        { success: false, error: 'Team member not found' },
-        {
-          status: 404,
-          headers: corsHeaders,
-        }
-      );
+      return createErrorResponse('Team member not found', request, 404);
     }
     
-    return NextResponse.json(
-      { success: true, data: member },
-      { headers: corsHeaders }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch team member' },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
-    );
+    return createSecureResponse({ success: true, data: member }, request);
+  } catch (error: any) {
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -58,24 +38,32 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for updating team members
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins and editors can update team members
+    if (!['admin', 'editor'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { id: paramId } = await params;
     const id = parseInt(paramId);
     const body = await request.json();
     const validated = TeamMemberSchema.partial().parse(body);
     
     const result = await teamMembers.update(id, validated);
-    return NextResponse.json(
-      { success: true, data: result },
-      { headers: corsHeaders }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to update team member' },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
-    );
+    return createSecureResponse({ success: true, data: result }, request);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.issues.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
+    }
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -84,21 +72,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for deleting team members
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins can delete team members
+    if (user.role !== 'admin') {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { id: paramId } = await params;
     const id = parseInt(paramId);
     const result = await teamMembers.delete(id);
-    return NextResponse.json(
-      { success: true, data: result },
-      { headers: corsHeaders }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete team member' },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
-    );
+    return createSecureResponse({ success: true, data: result }, request);
+  } catch (error: any) {
+    return createErrorResponse(error, request, 500);
   }
 }
 

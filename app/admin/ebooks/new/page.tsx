@@ -134,6 +134,7 @@ export default function NewEbook() {
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formDataUpload,
+                credentials: 'include' // Include authentication cookies
             });
 
             const data = await res.json();
@@ -168,6 +169,7 @@ export default function NewEbook() {
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formDataUpload,
+                credentials: 'include' // Include authentication cookies
             });
 
             const data = await res.json();

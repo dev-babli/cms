@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,8 @@ interface PageProps {
 }
 
 export default function EditBlogPost({ params }: PageProps) {
-    // Unwrap params for client component
-    const unwrappedParams = params as unknown as { id: string };
+    // Properly unwrap params using use() hook for Next.js 15
+    const { id } = use(params);
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -29,6 +29,7 @@ export default function EditBlogPost({ params }: PageProps) {
         content: "",
         author: "",
         featured_image: "",
+        banner_image: "",
         category: "",
         tags: "",
         published: false,
@@ -47,7 +48,7 @@ export default function EditBlogPost({ params }: PageProps) {
     useEffect(() => {
         fetchUserRole();
         fetchPost();
-    }, []);
+    }, [id]);
 
     const fetchUserRole = async () => {
         try {
@@ -63,13 +64,28 @@ export default function EditBlogPost({ params }: PageProps) {
 
     const fetchPost = async () => {
         try {
-            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}`);
+            console.log('📥 [Edit Blog] Fetching post ID:', id);
+            const res = await fetch(`/api/cms/blog/${id}`);
             const data = await res.json();
             if (data.success) {
-                setFormData(data.data);
+                console.log('✅ [Edit Blog] Post loaded:', { 
+                    id: data.data.id, 
+                    title: data.data.title,
+                    published: data.data.published,
+                    hasBannerImage: !!data.data.banner_image 
+                });
+                // Ensure all fields are set, including banner_image
+                setFormData({
+                    ...data.data,
+                    banner_image: data.data.banner_image || "",
+                });
+            } else {
+                console.error('❌ [Edit Blog] Failed to load post:', data.error);
+                alert(`Failed to load post: ${data.error || 'Unknown error'}`);
             }
-        } catch (error) {
-            alert("Failed to load post");
+        } catch (error: any) {
+            console.error('❌ [Edit Blog] Error loading post:', error);
+            alert(`Failed to load post: ${error?.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
@@ -80,7 +96,7 @@ export default function EditBlogPost({ params }: PageProps) {
 
         setSubmitting(true);
         try {
-            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}/submit-review`, {
+            const res = await fetch(`/api/cms/blog/${id}/submit-review`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
             });
@@ -104,19 +120,33 @@ export default function EditBlogPost({ params }: PageProps) {
         setSaving(true);
 
         try {
-            const res = await fetch(`/api/cms/blog/${unwrappedParams.id}`, {
+            console.log('💾 [Edit Blog] Submitting update for post ID:', id);
+            console.log('💾 [Edit Blog] Form data:', { 
+                title: formData.title, 
+                published: formData.published,
+                hasBannerImage: !!formData.banner_image,
+                hasFeaturedImage: !!formData.featured_image
+            });
+            
+            const res = await fetch(`/api/cms/blog/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData),
             });
 
-            if (res.ok) {
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                console.log('✅ [Edit Blog] Post updated successfully');
                 router.push("/admin/blog");
             } else {
-                alert("Failed to update post");
+                const errorMessage = data.error || 'Failed to update post';
+                console.error('❌ [Edit Blog] Update failed:', errorMessage);
+                alert(`Failed to update post: ${errorMessage}`);
             }
-        } catch (error) {
-            alert("Error updating post");
+        } catch (error: any) {
+            console.error('❌ [Edit Blog] Error updating post:', error);
+            alert(`Error updating post: ${error?.message || 'Unknown error'}`);
         } finally {
             setSaving(false);
         }
@@ -242,6 +272,34 @@ export default function EditBlogPost({ params }: PageProps) {
                                         src={formData.featured_image}
                                         alt="Preview"
                                         className="mt-4 rounded-lg max-h-48 object-cover"
+                                    />
+                                )}
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                <Label htmlFor="banner_image">Banner Image URL (Hero Section)</Label>
+                                    <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
+                                        Recommended: 1920×1080px (Full-width hero banner)
+                                    </span>
+                                </div>
+                                <Input
+                                    id="banner_image"
+                                    value={formData.banner_image || ""}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            banner_image: e.target.value,
+                                        })
+                                    }
+                                    placeholder="https://images.unsplash.com/..."
+                                    className="mt-2"
+                                />
+                                {formData.banner_image && (
+                                    <img
+                                        src={formData.banner_image}
+                                        alt="Banner Preview"
+                                        className="mt-4 rounded-lg max-h-48 object-cover w-full"
                                     />
                                 )}
                             </div>

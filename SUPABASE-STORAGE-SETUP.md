@@ -16,8 +16,9 @@ The CMS now uses Supabase Storage for file uploads, which works seamlessly on bo
    - **Public bucket**: ✅ **Enable** (so images are publicly accessible)
    - **File size limit**: Set as needed (default is 50MB)
    - **Allowed MIME types**: Leave empty to allow all, or specify:
-     - `image/jpeg,image/png,image/webp,image/gif,image/svg+xml`
-     - `video/mp4,video/webm,video/quicktime,video/x-msvideo`
+     - `image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-msvideo,application/pdf`
+     
+     **Important for PDFs**: If you want to upload PDFs, make sure to include `application/pdf` in the allowed MIME types, or leave the field empty to allow all types.
 
 6. Click **"Create bucket"**
 

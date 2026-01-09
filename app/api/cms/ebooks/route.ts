@@ -3,6 +3,9 @@ import { ebooks } from '@/lib/cms/api';
 import { EbookSchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,39 +14,38 @@ export async function GET(request: NextRequest) {
     
     const items = await ebooks.getAll(published);
     
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: true, data: items },
       {
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
         },
       }
     );
+    return applyCorsHeaders(response, request);
   } catch (error: any) {
-    console.error('❌ eBooks API Error:', error);
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch eBooks' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    console.error('❌ eBooks API Error:', process.env.NODE_ENV === 'development' ? error : 'Error fetching eBooks');
+    return createErrorResponse(error, request, 500);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication for creating eBooks
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can create eBooks
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const body = await request.json();
     const validated = EbookSchema.parse(body);
     
@@ -71,29 +73,23 @@ export async function POST(request: NextRequest) {
         .replace(/(^-|-$)/g, "");
     }
     
+    // Set created_by to current user ID for ownership tracking
+    sanitized.created_by = user.id;
+    
     const result = await ebooks.create(sanitized);
     const newId = (result as any).row?.id || (result as any).lastInsertRowid;
     const createdItem = (result as any).row || { id: newId, ...validated };
     
-    return NextResponse.json(
-      { success: true, data: createdItem },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: createdItem }, request);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
-      return NextResponse.json(
-        { success: false, error: `Validation failed: ${errorMessages}` },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
     }
     
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create eBook' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 

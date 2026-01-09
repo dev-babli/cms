@@ -3,13 +3,33 @@ import { users } from '@/lib/auth/users';
 import { createServerClient } from '@/lib/supabase';
 import db from '@/lib/db';
 import { z } from 'zod';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
 
+// SECURITY: Enhanced password policy (2026 best practices)
+// Minimum 12 characters with complexity requirements
 const RegisterSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string()
+    .min(12, 'Password must be at least 12 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   name: z.string().min(2),
-  role: z.enum(['admin', 'editor', 'author', 'viewer']).optional(),
+  // SECURITY: Prevent role assignment during registration
+  // Users should default to 'viewer' and require admin approval for higher roles
+  role: z.enum(['viewer']).optional().default('viewer'),
 });
+
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCorsPreflight(request, {
+    allowCredentials: true,
+  });
+  if (preflightResponse) {
+    return preflightResponse;
+  }
+  return new NextResponse(null, { status: 403 });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,10 +39,11 @@ export async function POST(request: NextRequest) {
     // Check if user already exists in custom table
     const existingUser = await users.findByEmail(email);
     if (existingUser) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: 'User with this email already exists' },
         { status: 409 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     // Create user in Supabase Auth (secure authentication)
@@ -31,10 +52,11 @@ export async function POST(request: NextRequest) {
     // Check if Supabase client is properly configured
     if (!supabase) {
       console.error('Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: 'Server configuration error. Please contact support.' },
         { status: 500 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -45,7 +67,7 @@ export async function POST(request: NextRequest) {
           name,
           role,
         },
-        emailRedirectTo: `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/auth/verify-email`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/auth/verify-email`,
       },
     });
 
@@ -53,10 +75,11 @@ export async function POST(request: NextRequest) {
       console.error('Supabase Auth error:', authError);
       // If user exists in Supabase Auth but not in our table, handle it
       if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { success: false, error: 'User with this email already exists' },
           { status: 409 }
         );
+        return applyCorsHeaders(response, request, { allowCredentials: true });
       }
       // Provide more user-friendly error messages
       let errorMessage = authError.message;
@@ -65,17 +88,19 @@ export async function POST(request: NextRequest) {
       } else if (authError.message.includes('Email rate limit')) {
         errorMessage = 'Too many registration attempts. Please try again later.';
       }
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: errorMessage },
         { status: 400 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     if (!authData.user) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: 'Failed to create user account' },
         { status: 500 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     // ADMIN APPROVAL FEATURE - COMMENTED OUT
@@ -131,7 +156,7 @@ export async function POST(request: NextRequest) {
     // });
     
     // AUTO-ACTIVATE: User is immediately active, can login right away
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Registration successful. You can now log in.',
       data: {
@@ -146,6 +171,7 @@ export async function POST(request: NextRequest) {
         emailSent: !!authData.session,
       },
     });
+    return applyCorsHeaders(response, request, { allowCredentials: true });
   } catch (error) {
     // Log full error in development, generic in production
     if (process.env.NODE_ENV === 'development') {
@@ -158,7 +184,7 @@ export async function POST(request: NextRequest) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
           error: process.env.NODE_ENV === 'development' 
@@ -167,11 +193,12 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     // Check if it's a Supabase configuration error
     if (error instanceof Error && error.message.includes('Supabase')) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
           error: process.env.NODE_ENV === 'development'
@@ -180,6 +207,7 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     // Check if it's a database connection error
@@ -188,17 +216,18 @@ export async function POST(request: NextRequest) {
       error.message.includes('database') ||
       error.message.includes('timeout')
     )) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
           error: 'Database connection error. Please try again in a moment.'
         },
         { status: 503 }
       );
+      return applyCorsHeaders(response, request, { allowCredentials: true });
     }
 
     // Generic error
-    return NextResponse.json(
+    const response = NextResponse.json(
       { 
         success: false, 
         error: process.env.NODE_ENV === 'development'
@@ -207,6 +236,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+    return applyCorsHeaders(response, request, { allowCredentials: true });
   }
 }
 

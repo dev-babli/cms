@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blogPosts } from '@/lib/cms/api';
 import { requireAuth, requireRole } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-    return new NextResponse(null, {
-        status: 200,
-        headers: corsHeaders,
-    });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 /**
@@ -34,10 +27,7 @@ export async function POST(
         const { approve = true } = body;
 
         if (isNaN(id) || id <= 0) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid post ID' },
-                { status: 400, headers: corsHeaders }
-            );
+            return createErrorResponse('Invalid post ID', request, 400);
         }
 
         // Get the current post
@@ -45,10 +35,7 @@ export async function POST(
         const post = allPosts.find((p: any) => p.id === id);
 
         if (!post) {
-            return NextResponse.json(
-                { success: false, error: 'Post not found' },
-                { status: 404, headers: corsHeaders }
-            );
+            return createErrorResponse('Post not found', request, 404);
         }
 
         // Update post: if approving, set published to true and publish_date
@@ -57,26 +44,17 @@ export async function POST(
                 published: true,
                 publish_date: new Date().toISOString(),
             });
-            return NextResponse.json(
-                { success: true, data: result, message: 'Post approved and published' },
-                { headers: corsHeaders }
-            );
+            return createSecureResponse({ success: true, data: result, message: 'Post approved and published' }, request);
         } else {
             // Reject: keep as draft
             const result = await blogPosts.update(id, {
                 published: false,
             });
-            return NextResponse.json(
-                { success: true, data: result, message: 'Post rejected' },
-                { headers: corsHeaders }
-            );
+            return createSecureResponse({ success: true, data: result, message: 'Post rejected' }, request);
         }
     } catch (error: any) {
-        console.error('Approval error:', error);
-        return NextResponse.json(
-            { success: false, error: error?.message || 'Failed to approve post' },
-            { status: 500, headers: corsHeaders }
-        );
+        console.error('Approval error:', process.env.NODE_ENV === 'development' ? error : 'Error');
+        return createErrorResponse(error, request, 500);
     }
 }
 

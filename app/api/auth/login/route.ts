@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
 
+// SECURITY: Login validation - only validate format, not complexity
+// Password complexity is enforced on registration/password change, not login
 const LoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(1, 'Password is required'),
 });
+
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCorsPreflight(request, {
+    allowCredentials: true,
+  });
+  if (preflightResponse) {
+    return preflightResponse;
+  }
+  return new NextResponse(null, { status: 403 });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +31,7 @@ export async function POST(request: NextRequest) {
       supabase = createServerClient();
     } catch (configError: any) {
       console.error('Supabase configuration error:', configError);
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { 
           success: false, 
           error: process.env.NODE_ENV === 'development' 
@@ -27,6 +40,7 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       );
+      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
     }
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -56,10 +70,11 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { success: false, error: errorMessage },
         { status: 401 }
       );
+      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
     }
 
     // Success - Supabase Auth handles everything
@@ -79,6 +94,11 @@ export async function POST(request: NextRequest) {
           expires_at: authData.session?.expires_at,
         },
       },
+    });
+    
+    // Apply CORS headers with credentials
+    applyCorsHeaders(response, request, {
+      allowCredentials: true,
     });
 
     // Set Supabase session cookie
@@ -108,15 +128,17 @@ export async function POST(request: NextRequest) {
     console.error('Login error:', error);
     
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { success: false, error: 'Invalid input data' },
         { status: 400 }
       );
+      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
     }
 
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { success: false, error: 'Login failed. Please try again.' },
       { status: 500 }
     );
+    return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
   }
 }

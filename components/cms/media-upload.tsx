@@ -35,6 +35,7 @@ export function MediaUpload({ onUpload, accept, type = "image" }: MediaUploadPro
             const res = await fetch("/api/upload", {
                 method: "POST",
                 body: formData,
+                credentials: 'include' // Include authentication cookies
             });
 
             // Check content type before parsing

@@ -2,7 +2,9 @@
 import { Pool } from 'pg';
 
 if (!process.env.DATABASE_URL) {
-  console.warn('⚠️ DATABASE_URL environment variable is not set');
+  console.error('❌ DATABASE_URL environment variable is not set');
+  console.error('   Please set DATABASE_URL in your .env file or environment variables');
+  console.error('   Format: postgresql://user:password@host:port/database');
 }
 
 // Helper to parse and validate connection string
@@ -25,19 +27,28 @@ function getConnectionConfig() {
     console.error('❌ Invalid DATABASE_URL format');
   }
 
+  // For Supabase, use smaller pool size to avoid connection limits
+  // Free tier: 60 direct connections, 200 pooler connections
+  // Use pooler (port 6543) for better connection management
+  const isSupabase = connectionString.includes('supabase');
+  const usePooler = isSupabase && connectionString.includes(':6543');
+  
   return {
     connectionString,
-    ssl: connectionString.includes('supabase') 
+    ssl: isSupabase 
       ? { rejectUnauthorized: false } 
       : false,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 30000, // Increased to 30 seconds for Supabase
-    statement_timeout: 30000, // 30 second statement timeout
-    query_timeout: 30000, // 30 second query timeout
+    // Reduce pool size to avoid "max connections" errors
+    // Supabase free tier has connection limits
+    max: usePooler ? 5 : 3, // Smaller pool for direct connections, slightly larger for pooler
+    min: 0, // Don't keep idle connections
+    idleTimeoutMillis: 10000, // Close idle connections faster (10 seconds)
+    connectionTimeoutMillis: 10000, // 10 second connection timeout
+    statement_timeout: 20000, // 20 second statement timeout
+    query_timeout: 20000, // 20 second query timeout
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000,
-    allowExitOnIdle: false, // Keep pool alive
+    allowExitOnIdle: true, // Allow pool to close when idle
   };
 }
 
@@ -148,6 +159,21 @@ export const query = async (text: string, params?: any[], retries = 3): Promise<
         console.error('   Error:', errorMessage);
         console.error('   💡 The database tables may not be initialized');
         console.error('   💡 Run database migrations or initialization scripts');
+      }
+      
+      // Check for max connections error
+      if (errorMessage.includes('Max client connections') || 
+          errorMessage.includes('too many clients') ||
+          errorMessage.includes('connection limit') ||
+          errorCode === '53300') {
+        console.error('❌ Database Connection Pool Exhausted!');
+        console.error('   Error:', errorMessage);
+        console.error('   💡 Too many concurrent database connections');
+        console.error('   💡 For Supabase: Use connection pooler (port 6543) instead of direct connection (port 5432)');
+        console.error('   💡 Update DATABASE_URL to use port 6543 for better connection management');
+        console.error('   💡 Example: postgresql://user:pass@host.xxx.supabase.co:6543/db');
+        // Don't retry on connection limit errors - it will just make it worse
+        throw new Error(`Database connection limit reached. Please use Supabase connection pooler (port 6543) or reduce concurrent requests. Original error: ${errorMessage}`);
       }
       
       // Log and throw the error with full details

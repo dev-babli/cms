@@ -3,9 +3,16 @@ import { users } from '@/lib/auth/users';
 import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
 
+// SECURITY: Enhanced password policy (2026 best practices)
+// Minimum 12 characters with complexity requirements
 const ResetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(6),
+  password: z.string()
+    .min(12, 'Password must be at least 12 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
 });
 
 export async function POST(request: NextRequest) {

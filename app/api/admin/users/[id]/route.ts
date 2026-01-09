@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth/server';
 import { z } from 'zod';
+import { applyCorsHeaders } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse } from '@/lib/security/api-helpers';
 
 const UpdateUserSchema = z.object({
   name: z.string().min(2).optional(),
@@ -97,21 +99,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updated_at: updatedUser.user.updated_at || updatedUser.user.created_at,
     };
 
-    return NextResponse.json({ success: true, data: result });
-  } catch (error) {
-    console.error('Update user error:', error);
+    return createSecureResponse({ success: true, data: result }, request);
+  } catch (error: any) {
+    console.error('Update user error:', process.env.NODE_ENV === 'development' ? error : 'Error');
     
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid input data' },
-        { status: 400 }
-      );
+      return createErrorResponse('Invalid input data', request, 400);
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Failed to update user' },
-      { status: 500 }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -158,15 +154,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       );
     }
 
-    return NextResponse.json({ 
+    return createSecureResponse({ 
       success: true, 
       message: 'User deleted successfully' 
-    });
-  } catch (error) {
-    console.error('Delete user error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete user' },
-      { status: 500 }
-    );
+    }, request);
+  } catch (error: any) {
+    console.error('Delete user error:', process.env.NODE_ENV === 'development' ? error : 'Error');
+    return createErrorResponse(error, request, 500);
   }
 }

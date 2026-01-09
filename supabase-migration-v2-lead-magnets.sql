@@ -7,8 +7,9 @@
 -- 1. ENHANCE EXISTING TABLES WITH SEO FIELDS
 -- ============================================
 
--- Add SEO fields to blog_posts
+-- Add SEO fields and banner_image to blog_posts
 ALTER TABLE blog_posts 
+ADD COLUMN IF NOT EXISTS banner_image TEXT,
 ADD COLUMN IF NOT EXISTS meta_title TEXT,
 ADD COLUMN IF NOT EXISTS meta_description TEXT,
 ADD COLUMN IF NOT EXISTS meta_keywords TEXT,
@@ -18,6 +19,7 @@ ADD COLUMN IF NOT EXISTS og_description TEXT,
 ADD COLUMN IF NOT EXISTS og_image TEXT,
 ADD COLUMN IF NOT EXISTS og_type TEXT DEFAULT 'article',
 ADD COLUMN IF NOT EXISTS schema_markup TEXT, -- JSON schema markup
+ADD COLUMN IF NOT EXISTS custom_tracking_script TEXT,
 ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id),
 ADD COLUMN IF NOT EXISTS tag_ids TEXT, -- JSON array of tag IDs
 ADD COLUMN IF NOT EXISTS scheduled_publish_date TIMESTAMP;

@@ -11,12 +11,8 @@ export const runtime = 'nodejs';
 // Ensure this route is always treated as an API route
 export const revalidate = 0;
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+import { handleCorsPreflight, applyCorsHeaders } from '@/lib/security/cors';
+import { getCurrentUser } from '@/lib/auth/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,10 +25,12 @@ export async function GET(request: NextRequest) {
     } catch (dbError: any) {
       console.error('❌ Database error in blogPosts.getAll:', dbError);
       // Return JSON error instead of crashing
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
-          error: `Database error: ${dbError?.message || 'Failed to fetch blog posts'}`,
+          error: process.env.NODE_ENV === 'development' 
+            ? `Database error: ${dbError?.message || 'Failed to fetch blog posts'}`
+            : 'Failed to fetch blog posts',
           details: process.env.NODE_ENV === 'development' ? {
             message: dbError?.message,
             code: dbError?.code,
@@ -44,30 +42,50 @@ export async function GET(request: NextRequest) {
           status: 500,
           headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders,
           },
         }
       );
+      return applyCorsHeaders(response, request);
     }
+    
+    // Normalize published field in response and filter by publish_date
+    const now = new Date();
+    const normalizedPosts = Array.isArray(posts) ? posts
+      .map(post => ({
+        ...post,
+        published: post.published === true || post.published === 'true' || post.published === 1 || post.published === '1',
+      }))
+      .filter(post => {
+        // If published is true, also check publish_date
+        if (published && post.publish_date) {
+          const publishDate = new Date(post.publish_date);
+          return publishDate <= now;
+        }
+        return published ? post.published : true; // If not filtering by published, return all
+      }) : [];
     
     // Log for debugging
-    console.log(`📝 Blog API: Returning ${posts.length} ${published ? 'published' : 'all'} posts`);
-    if (posts.length > 0) {
-      console.log('📝 Post slugs:', posts.map((p: any) => ({ slug: p.slug, title: p.title, published: p.published })));
+    console.log(`📝 [Blog API] Returning ${normalizedPosts.length} ${published ? 'published' : 'all'} posts (from ${posts?.length || 0} total)`);
+    if (normalizedPosts.length > 0) {
+      console.log('📝 [Blog API] Post slugs:', normalizedPosts.map((p: any) => ({ 
+        slug: p.slug, 
+        title: p.title, 
+        published: p.published,
+        hasBannerImage: !!p.banner_image,
+        publish_date: p.publish_date 
+      })));
     }
     
-    // Enable CORS for React app
-    return NextResponse.json(
-      { success: true, data: posts },
+    // Enable secure CORS for React app
+    const response = NextResponse.json(
+      { success: true, data: normalizedPosts },
       {
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Cache-Control': 'no-store, no-cache, must-revalidate', // Prevent caching
         },
       }
     );
+    return applyCorsHeaders(response, request);
   } catch (error: any) {
     console.error('❌ Blog API Error:', error);
     const errorMessage = error?.message || 'Failed to fetch blog posts';
@@ -77,10 +95,10 @@ export async function GET(request: NextRequest) {
       stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
     });
     // Always return JSON, never HTML
-    return NextResponse.json(
+    const response = NextResponse.json(
       { 
         success: false, 
-        error: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? errorMessage : 'Failed to fetch blog posts',
         details: process.env.NODE_ENV === 'development' ? {
           message: error?.message,
           code: error?.code,
@@ -92,36 +110,50 @@ export async function GET(request: NextRequest) {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     );
+    return applyCorsHeaders(response, request);
   }
 }
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCorsPreflight(request);
+  if (preflightResponse) {
+    return preflightResponse;
+  }
+  return new NextResponse(null, { status: 403 });
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication for creating blog posts
+    const user = await getCurrentUser();
+    if (!user) {
+      const response = NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+      return applyCorsHeaders(response, request);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can create blog posts
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      const response = NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+      return applyCorsHeaders(response, request);
+    }
+    
     // Parse request body with error handling
     let body;
     try {
       body = await request.json();
     } catch (parseError: any) {
       console.error('Failed to parse request body:', parseError);
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
           error: 'Invalid JSON in request body',
@@ -130,13 +162,11 @@ export async function POST(request: NextRequest) {
         {
           status: 400,
           headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Content-Type': 'application/json',
           },
         }
       );
+      return applyCorsHeaders(response, request);
     }
     
     console.log('Creating blog post with data:', body);
@@ -152,7 +182,7 @@ export async function POST(request: NextRequest) {
         const errorMessages = validationError.issues.map(err => 
           `${err.path.join('.')}: ${err.message}`
         ).join(', ');
-        return NextResponse.json(
+        const response = NextResponse.json(
           { 
             success: false, 
             error: `Validation failed: ${errorMessages}` 
@@ -161,12 +191,10 @@ export async function POST(request: NextRequest) {
             status: 400,
             headers: {
               'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             },
           }
         );
+        return applyCorsHeaders(response, request);
       }
       throw validationError;
     }
@@ -183,22 +211,22 @@ export async function POST(request: NextRequest) {
       console.log('✅ Sanitization completed');
     } catch (sanitizeError: any) {
       console.error('❌ Sanitization error:', sanitizeError);
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
-          error: `Sanitization failed: ${sanitizeError?.message || 'Unknown error'}`,
+          error: process.env.NODE_ENV === 'development' 
+            ? `Sanitization failed: ${sanitizeError?.message || 'Unknown error'}`
+            : 'Failed to process content',
           details: process.env.NODE_ENV === 'development' ? sanitizeError?.message : undefined
         },
         {
           status: 500,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         }
       );
+      return applyCorsHeaders(response, request);
     }
     
     // Note: custom_tracking_script is not in BlogPostSchema, but if it exists in body, sanitize it
@@ -218,6 +246,9 @@ export async function POST(request: NextRequest) {
     if (!sanitized.publish_date) {
       sanitized.publish_date = new Date().toISOString();
     }
+    
+    // Set created_by to current user ID for ownership tracking
+    sanitized.created_by = user.id;
     
     try {
       console.log('📝 Attempting to create blog post in database...');
@@ -250,7 +281,7 @@ export async function POST(request: NextRequest) {
         (global as any).io.emit('blog:created', createdPost);
       }
       
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: true, 
           data: createdPost
@@ -259,31 +290,29 @@ export async function POST(request: NextRequest) {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         }
       );
+      return applyCorsHeaders(response, request);
     } catch (dbError: any) {
       console.error('Database error during blog post creation:', dbError);
       // Ensure we always return JSON, even on database errors
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
-          error: `Database error: ${dbError?.message || 'Failed to create blog post'}`,
+          error: process.env.NODE_ENV === 'development' 
+            ? `Database error: ${dbError?.message || 'Failed to create blog post'}`
+            : 'Failed to create blog post',
           details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined
         },
         {
           status: 500,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         }
       );
+      return applyCorsHeaders(response, request);
     }
   } catch (error: any) {
     console.error('Blog post creation error:', error);
@@ -298,7 +327,7 @@ export async function POST(request: NextRequest) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
-      return NextResponse.json(
+      const response = NextResponse.json(
         { 
           success: false, 
           error: `Validation failed: ${errorMessages}` 
@@ -307,31 +336,27 @@ export async function POST(request: NextRequest) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         }
       );
+      return applyCorsHeaders(response, request);
     }
     
     const errorMessage = error instanceof Error ? error.message : 'Failed to create blog post';
-    return NextResponse.json(
+    const response = NextResponse.json(
       { 
         success: false, 
-        error: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? errorMessage : 'Failed to create blog post',
         details: process.env.NODE_ENV === 'development' ? error?.message : undefined
       },
       {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     );
+    return applyCorsHeaders(response, request);
   }
 }
 

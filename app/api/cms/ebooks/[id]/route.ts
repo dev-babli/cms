@@ -3,6 +3,10 @@ import { ebooks } from '@/lib/cms/api';
 import { EbookSchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
+import { getCurrentUser } from '@/lib/auth/server';
+import { verifyOwnership, verifyDeletePermission } from '@/lib/auth/ownership';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -12,20 +16,11 @@ export async function GET(
   try {
     const item = await ebooks.getBySlug(id);
     if (!item) {
-      return NextResponse.json(
-        { success: false, error: 'eBook not found' },
-        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      return createErrorResponse('eBook not found', request, 404);
     }
-    return NextResponse.json(
-      { success: true, data: item },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: item }, request);
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch eBook' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -35,6 +30,17 @@ export async function PUT(
 ) {
   const { id } = await params;
   try {
+    // SECURITY: Require authentication for updating eBooks
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can update eBooks
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const body = await request.json();
     const validated = EbookSchema.partial().parse(body);
     
@@ -60,23 +66,31 @@ export async function PUT(
       }
     });
     
+    // SECURITY: Verify ownership to prevent IDOR attacks
+    const allEbooks = await ebooks.getAll(false);
+    const existingEbook = allEbooks.find((ebook: any) => ebook.id === parseInt(id));
+    
+    if (!existingEbook) {
+      return createErrorResponse('eBook not found', request, 404);
+    }
+    
+    try {
+      verifyOwnership(user, existingEbook);
+    } catch (ownershipError: any) {
+      return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
+    }
+    
     const result = await ebooks.update(parseInt(id), sanitized);
     
-    return NextResponse.json(
-      { success: true, data: (result as any).row || result },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: (result as any).row || result }, request);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Validation failed' },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      const errorMessages = error.issues.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
     }
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update eBook' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -85,28 +99,45 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for deleting eBooks
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Verify delete permission
+    try {
+      verifyDeletePermission(user);
+    } catch (permissionError: any) {
+      return createErrorResponse(permissionError.message || 'Permission denied', request, 403);
+    }
+    
     const { id } = await params;
-    await ebooks.delete(parseInt(id));
-    return NextResponse.json(
-      { success: true },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    const ebookId = parseInt(id);
+    
+    // SECURITY: Verify ownership to prevent IDOR attacks
+    const allEbooks = await ebooks.getAll(false);
+    const existingEbook = allEbooks.find((ebook: any) => ebook.id === ebookId);
+    
+    if (!existingEbook) {
+      return createErrorResponse('eBook not found', request, 404);
+    }
+    
+    try {
+      verifyOwnership(user, existingEbook);
+    } catch (ownershipError: any) {
+      return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
+    }
+    
+    await ebooks.delete(ebookId);
+    return createSecureResponse({ success: true }, request);
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete eBook' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
+
 

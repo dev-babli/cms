@@ -9,8 +9,6 @@ interface EnvConfig {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   DATABASE_URL?: string;
-  NEXTAUTH_SECRET?: string;
-  NEXTAUTH_URL?: string;
 }
 
 export function validateEnvironmentVariables(): {
@@ -42,15 +40,8 @@ export function validateEnvironmentVariables(): {
     errors.push('DATABASE_URL is required');
   }
 
-  // NextAuth secret is required for session management
-  if (!process.env.NEXTAUTH_SECRET) {
-    warnings.push('NEXTAUTH_SECRET is recommended for session management');
-  }
-
-  // NextAuth URL is recommended for production
-  if (process.env.NODE_ENV === 'production' && !process.env.NEXTAUTH_URL) {
-    warnings.push('NEXTAUTH_URL is recommended for production deployments');
-  }
+  // Note: NEXTAUTH_SECRET and NEXTAUTH_URL are no longer needed
+  // Supabase Auth handles all session management
 
   return {
     valid: errors.length === 0,

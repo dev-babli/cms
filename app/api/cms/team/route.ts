@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { teamMembers } from '@/lib/cms/api';
 import { TeamMemberSchema } from '@/lib/cms/types';
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
+import { z } from 'zod';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,45 +12,30 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get('published') === 'true';
     
     const data = await teamMembers.getAll(published);
-    return NextResponse.json(
-      { success: true, data },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch team members' },
-      {
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      }
-    );
+    return createSecureResponse({ success: true, data }, request);
+  } catch (error: any) {
+    return createErrorResponse(error, request, 500);
   }
 }
 
 // Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication for creating team members
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins and editors can create team members
+    if (!['admin', 'editor'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const body = await request.json();
     
     // Clean up empty strings - convert to undefined for optional fields
@@ -64,66 +53,16 @@ export async function POST(request: NextRequest) {
     const validated = TeamMemberSchema.parse(cleanedBody);
     
     const result = await teamMembers.create(validated);
-    return NextResponse.json(
-      { success: true, data: result },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      }
-    );
+    return createSecureResponse({ success: true, data: result }, request);
   } catch (error: any) {
-    console.error('Error creating team member:', error);
-    
-    // Handle Zod validation errors
-    if (error?.issues) {
+    if (error instanceof z.ZodError) {
       const validationErrors = error.issues.map((issue: any) => 
         `${issue.path.join('.')}: ${issue.message}`
       ).join(', ');
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Validation failed: ${validationErrors}`,
-          details: process.env.NODE_ENV === 'development' ? error.issues : undefined
-        },
-        {
-          status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      return createErrorResponse(`Validation failed: ${validationErrors}`, request, 400);
     }
     
-    const errorMessage = error?.message || 'Failed to create team member';
-    const errorDetails = process.env.NODE_ENV === 'development' ? {
-      message: error?.message,
-      code: error?.code,
-      detail: error?.detail,
-      hint: error?.hint
-    } : undefined;
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: errorMessage,
-        details: errorDetails
-      },
-      {
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 

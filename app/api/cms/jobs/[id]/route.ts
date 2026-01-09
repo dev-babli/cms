@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jobPostings } from '@/lib/cms/api';
 import { JobPostingSchema } from '@/lib/cms/types';
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
+import { z } from 'zod';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: corsHeaders,
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function GET(
@@ -26,18 +21,12 @@ export async function GET(
     const job = allJobs.find((item: any) => item.id === jobId);
 
     if (!job) {
-      return NextResponse.json(
-        { success: false, error: 'Job posting not found' },
-        { status: 404, headers: corsHeaders }
-      );
+      return createErrorResponse('Job posting not found', request, 404);
     }
 
-    return NextResponse.json({ success: true, data: job }, { headers: corsHeaders });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch job posting' },
-      { status: 500, headers: corsHeaders }
-    );
+    return createSecureResponse({ success: true, data: job }, request);
+  } catch (error: any) {
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -46,18 +35,32 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for updating jobs
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can update jobs
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { id } = await params;
     const jobId = parseInt(id);
     const body = await request.json();
     const validated = JobPostingSchema.partial().parse(body);
 
     const result = await jobPostings.update(jobId, validated);
-    return NextResponse.json({ success: true, data: result }, { headers: corsHeaders });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to update job posting' },
-      { status: 500, headers: corsHeaders }
-    );
+    return createSecureResponse({ success: true, data: result }, request);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.issues.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
+    }
+    return createErrorResponse(error, request, 500);
   }
 }
 
@@ -66,15 +69,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Require authentication for deleting jobs
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins and editors can delete jobs
+    if (!['admin', 'editor'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { id } = await params;
     const jobId = parseInt(id);
     const result = await jobPostings.delete(jobId);
-    return NextResponse.json({ success: true, data: result }, { headers: corsHeaders });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete job posting' },
-      { status: 500, headers: corsHeaders }
-    );
+    return createSecureResponse({ success: true, data: result }, request);
+  } catch (error: any) {
+    return createErrorResponse(error, request, 500);
   }
 }
 

@@ -1,68 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Route segment config - ensure this route is dynamic
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 import { caseStudies } from '@/lib/cms/api';
 import { CaseStudySchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
+
+// Route segment config - ensure this route is dynamic
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
     
+    console.log(`📊 [Case Studies API] Fetching case studies (published=${published})`);
+    
     const items = await caseStudies.getAll(published);
     
-    return NextResponse.json(
-      { success: true, data: items },
+    // Normalize published field in response and filter by publish_date
+    const now = new Date();
+    const normalizedItems = Array.isArray(items) ? items
+      .map(item => ({
+        ...item,
+        published: item.published === true || item.published === 'true' || item.published === 1 || item.published === '1',
+      }))
+      .filter(item => {
+        // If published is true, also check publish_date
+        if (item.published && item.publish_date) {
+          const publishDate = new Date(item.publish_date);
+          return publishDate <= now;
+        }
+        return item.published;
+      }) : [];
+    
+    console.log(`✅ [Case Studies API] Found ${normalizedItems.length} published items (from ${items?.length || 0} total)`);
+    
+    const response = NextResponse.json(
+      { success: true, data: normalizedItems },
       {
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
         },
       }
     );
+    return applyCorsHeaders(response, request);
   } catch (error: any) {
-    console.error('❌ Case Studies API Error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error?.message || 'Failed to fetch case studies',
-        details: process.env.NODE_ENV === 'development' ? {
-          message: error?.message,
-          code: error?.code,
-          detail: error?.detail,
-          hint: error?.hint
-        } : undefined
-      },
-      { 
-        status: 500, 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*' 
-        } 
-      }
-    );
+    console.error('❌ [Case Studies API] Error:', process.env.NODE_ENV === 'development' ? error : 'Error fetching case studies');
+    return createErrorResponse(error, request, 500);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication for creating case studies
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins, editors, and authors can create case studies
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const body = await request.json();
     const validated = CaseStudySchema.parse(body);
     
@@ -93,29 +100,23 @@ export async function POST(request: NextRequest) {
         .replace(/(^-|-$)/g, "");
     }
     
+    // Set created_by to current user ID for ownership tracking
+    sanitized.created_by = user.id;
+    
     const result = await caseStudies.create(sanitized);
     const newId = (result as any).row?.id || (result as any).lastInsertRowid;
     const createdItem = (result as any).row || { id: newId, ...validated };
     
-    return NextResponse.json(
-      { success: true, data: createdItem },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true, data: createdItem }, request);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
-      return NextResponse.json(
-        { success: false, error: `Validation failed: ${errorMessages}` },
-        { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } }
-      );
+      return createErrorResponse(`Validation failed: ${errorMessages}`, request, 400);
     }
     
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create case study' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 

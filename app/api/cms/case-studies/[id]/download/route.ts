@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { caseStudies } from '@/lib/cms/api';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
 export async function POST(
   request: NextRequest,
@@ -8,26 +10,17 @@ export async function POST(
   try {
     const { id } = await params;
     await caseStudies.incrementDownload(parseInt(id));
-    return NextResponse.json(
-      { success: true },
-      { headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createSecureResponse({ success: true }, request);
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to increment download count' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
-    );
+    return createErrorResponse(error, request, 500);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
+
+
+
+
 

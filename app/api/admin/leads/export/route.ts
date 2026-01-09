@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { leads } from '@/lib/cms/api';
+import { getCurrentUser } from '@/lib/auth/server';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Require authentication for exporting leads
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+    
+    // SECURITY: Only admins and editors can export leads
+    if (!['admin', 'editor'].includes(user.role)) {
+      return createErrorResponse('Insufficient permissions', request, 403);
+    }
+    
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
@@ -74,30 +88,33 @@ export async function GET(request: NextRequest) {
 
     const csv = csvRows.join('\n');
 
-    return new NextResponse(csv, {
+    const response = new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv',
         'Content-Disposition': `attachment; filename="leads-${new Date().toISOString().split('T')[0]}.csv"`,
-        'Access-Control-Allow-Origin': '*',
       },
     });
+    return applyCorsHeaders(response, request);
   } catch (error: any) {
-    console.error('❌ Lead Export Error:', error);
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to export leads' },
-      { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+    console.error('❌ Lead Export Error:', process.env.NODE_ENV === 'development' ? error : 'Error');
+    const response = NextResponse.json(
+      { 
+        success: false, 
+        error: process.env.NODE_ENV === 'development' 
+          ? (error?.message || 'Failed to export leads')
+          : 'Failed to export leads'
+      },
+      { status: 500 }
     );
+    return applyCorsHeaders(response, request);
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
+
+
+
+
 

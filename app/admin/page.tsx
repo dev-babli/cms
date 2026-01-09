@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { FadeIn } from "@/components/ui/scroll-reveal";
-import { requireAuth } from "@/lib/auth/server";
-import LogoutButton from "@/components/auth/LogoutButton";
+import { requireAuth, getCurrentUser } from "@/lib/auth/server";
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic'; // Force dynamic rendering for admin page
+export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-  // Require authentication - will redirect to login if not authenticated
+  // requireAuth() will redirect to login if not authenticated
+  // Don't catch the redirect error - let Next.js handle it
   const user = await requireAuth();
   const contentTypes = [
     {
@@ -70,17 +70,6 @@ export default async function AdminDashboard() {
       count: 0,
     },
     {
-      title: "Whitepapers",
-      description: "Research & insights",
-      href: "/admin/whitepapers",
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      count: 0,
-    },
-    {
       title: "Categories",
       description: "Content categories",
       href: "/admin/categories",
@@ -117,110 +106,61 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
-      {/* Premium Header with Enhanced Glass Morphism */}
-      <header className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold gradient-text">Intellectt CMS</h1>
-              <p className="text-sm text-slate-600 font-medium">Content Management System</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-slate-900">{user.name}</p>
-                <p className="text-xs text-slate-600 capitalize">{user.role}</p>
-              </div>
-              <LogoutButton />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="p-6">
+      {/* Page Title - Sanity Style */}
+      <div className="mb-8">
+        <h1 className="text-[18px] font-medium text-[#111827] mb-2">Dashboard</h1>
+        <p className="text-sm text-[#6B7280]">Overview of your content and activity</p>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Premium Welcome Section */}
-        <FadeIn>
-          <div className="mb-12">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-full text-sm font-semibold border border-blue-200/50">
-                👋 Welcome Back
-              </span>
-            </div>
-            <h2 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
-              Welcome back, {user.name}
-            </h2>
-            <p className="text-xl text-slate-600 font-medium">
-              Manage your content and publish updates • <span className="px-3 py-1 bg-slate-100 rounded-lg text-slate-900 font-semibold capitalize">{user.role}</span>
-            </p>
-          </div>
-        </FadeIn>
+      {/* Quick Actions - Minimal */}
+      <div className="mb-8 flex items-center gap-2">
+        <Link href="/admin/blog/new">
+          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Blog Post
+          </button>
+        </Link>
+        <Link href="/admin/ebooks/new">
+          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F9FAFB] transition-colors duration-150 ease-out">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New eBook
+          </button>
+        </Link>
+      </div>
 
-        {/* Quick Actions */}
-        <FadeIn delay={0.1}>
-          <div className="mb-12 flex flex-wrap items-center gap-3">
-            <Link href="/admin/blog/new">
-              <button className="btn-premium flex items-center gap-2 group">
-                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                New Blog Post
-              </button>
-            </Link>
-            <Link href="/admin/ebooks/new">
-              <button className="px-6 py-3 bg-white text-slate-700 rounded-xl text-sm font-semibold hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-300 shadow-md border border-slate-200 hover:border-blue-300 hover:shadow-lg flex items-center gap-2 group">
-                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                New eBook
-              </button>
-            </Link>
-          </div>
-        </FadeIn>
-
-        {/* Content Types Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {contentTypes.map((type, index) => (
-            <FadeIn key={type.href} delay={0.15 + index * 0.05}>
-              <Link href={type.href}>
-                <div className="group premium-card-gradient p-6 cursor-pointer hover-lift relative overflow-hidden">
-                  {/* Animated Background Gradient on Hover */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-500 rounded-2xl"></div>
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl text-white group-hover:from-blue-600 group-hover:to-indigo-700 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-blue-500/30">
-                        {type.icon}
-                      </div>
-                      <div className="text-right">
-                        <span className="text-3xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                          {type.count}
-                        </span>
-                        <p className="text-xs text-slate-500 font-medium">Items</p>
-                      </div>
+      {/* Content Types - List View (High Density) */}
+      <div className="border border-[#E5E7EB] rounded-md bg-white">
+        <div className="divide-y divide-[#E5E7EB]">
+          {contentTypes.map((type) => (
+            <Link key={type.href} href={type.href}>
+              <div className="flex items-center gap-4 px-4 py-3 hover:bg-[#F9FAFB] transition-colors duration-150 ease-out">
+                <div className="text-[#6B7280]">
+                  {type.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-[#111827]">{type.title}</h3>
+                      <p className="text-xs text-[#6B7280] mt-0.5">{type.description}</p>
                     </div>
-                    <h3 className="text-xl font-bold mb-2 text-slate-900 group-hover:text-blue-600 transition-colors duration-300">
-                      {type.title}
-                    </h3>
-                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                      {type.description}
-                    </p>
-                    {type.adminOnly && (
-                      <span className="inline-block mt-3 px-3 py-1 bg-gradient-to-r from-red-100 to-pink-100 text-red-700 text-xs font-bold rounded-full border border-red-200/50 shadow-sm">
-                        🔒 Admin Only
-                      </span>
-                    )}
-                    
-                    {/* Arrow indicator */}
-                    <div className="mt-4 flex items-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="text-sm font-semibold">View All</span>
-                      <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-[#6B7280]">{type.count} items</span>
+                      {type.adminOnly && (
+                        <span className="text-xs text-[#6B7280] px-2 py-0.5 bg-[#F3F4F6] rounded">Admin</span>
+                      )}
+                      <svg className="w-4 h-4 text-[#6B7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
                   </div>
                 </div>
-              </Link>
-            </FadeIn>
+              </div>
+            </Link>
           ))}
         </div>
       </div>

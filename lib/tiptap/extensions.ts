@@ -1,6 +1,5 @@
 // Custom Tiptap extensions for social media embeds
 import { Node, RawCommands, Extension } from '@tiptap/core';
-import '@tiptap/extension-text-style';
 
 // Instagram Embed Extension
 export const Instagram = Node.create({
@@ -299,4 +298,9 @@ export const FontFamily = Extension.create<FontFamilyOptions>({
     };
   },
 });
+
+// Export new extensions
+export { FormBuilder } from './extensions/form-builder';
+export { Accordion } from './extensions/accordion';
+export { Dropdown } from './extensions/dropdown';
 

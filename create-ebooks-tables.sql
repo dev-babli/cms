@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS ebooks (
   -- Timestamps
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_by INTEGER REFERENCES users(id)
+  created_by TEXT
 );
 
 -- ============================================
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS case_studies (
   -- Timestamps
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_by INTEGER REFERENCES users(id)
+  created_by TEXT
 );
 
 -- ============================================
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS whitepapers (
   -- Timestamps
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_by INTEGER REFERENCES users(id)
+  created_by TEXT
 );
 
 -- ============================================

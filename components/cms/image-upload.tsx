@@ -33,6 +33,7 @@ export function ImageUpload({ onUpload, currentUrl }: ImageUploadProps) {
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
+                credentials: 'include' // Include authentication cookies
             });
 
             // Check content type before parsing

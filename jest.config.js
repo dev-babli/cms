@@ -6,7 +6,7 @@ const createJestConfig = nextJest({
 
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'node', // Use node environment for API tests (has fetch built-in in Node 18+)
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
@@ -20,6 +20,11 @@ const customJestConfig = {
     'lib/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+  ],
+  // Transform ignore patterns
+  transformIgnorePatterns: [
+    '/node_modules/',
+    '^.+\\.module\\.(css|sass|scss)$',
   ],
 };
 

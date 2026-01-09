@@ -71,16 +71,11 @@ async function performLogout(request: NextRequest) {
   }
 }
 
+import { handleCorsPreflight } from '@/lib/security/cors';
+
 // Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflight(request) || new NextResponse(null, { status: 403 });
 }
 
 // Handle POST requests (form submissions and fetch calls)

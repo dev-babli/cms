@@ -146,4 +146,69 @@ export async function sendThankYouEmail(data: ThankYouEmailData): Promise<boolea
     });
 }
 
+/**
+ * Send admin notification email for contact form submissions
+ */
+export async function sendAdminNotificationEmail(data: {
+    name: string;
+    email: string;
+    company?: string;
+    phone?: string;
+    message?: string;
+}): Promise<boolean> {
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_TO || 'admin@intellectt.com';
+    
+    const subject = `New Contact Form Submission from ${data.name}`;
+    
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #e53e3e 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">New Contact Form Submission</h1>
+      </div>
+      
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+        <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 4px;">
+          <h2 style="margin-top: 0; color: #1e40af; font-size: 20px;">Contact Information</h2>
+          <p style="margin: 8px 0;"><strong>Name:</strong> ${data.name}</p>
+          <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:${data.email}">${data.email}</a></p>
+          ${data.company ? `<p style="margin: 8px 0;"><strong>Company:</strong> ${data.company}</p>` : ''}
+          ${data.phone ? `<p style="margin: 8px 0;"><strong>Phone:</strong> <a href="tel:${data.phone}">${data.phone}</a></p>` : ''}
+        </div>
+        
+        ${data.message ? `
+        <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 4px; border: 1px solid #e2e8f0;">
+          <h3 style="margin-top: 0; color: #1e293b; font-size: 18px;">Message:</h3>
+          <p style="color: #475569; white-space: pre-wrap;">${data.message}</p>
+        </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="mailto:${data.email}" 
+             style="display: inline-block; background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+            Reply to ${data.name}
+          </a>
+        </div>
+        
+        <p style="font-size: 14px; color: #64748b; margin-top: 30px;">
+          This notification was sent because someone filled out the contact form on your website.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+    return await sendEmail({
+        to: adminEmail,
+        subject,
+        html,
+    });
+}
+
 

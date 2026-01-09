@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blogPosts } from '@/lib/cms/api';
+import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: corsHeaders,
-  });
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
 
 export async function GET(
@@ -23,28 +16,13 @@ export async function GET(
     const post = await blogPosts.getBySlug(slug);
     
     if (!post) {
-      return NextResponse.json(
-        { success: false, error: 'Post not found' },
-        {
-          status: 404,
-          headers: corsHeaders,
-        }
-      );
+      return createErrorResponse('Post not found', request, 404);
     }
     
-    return NextResponse.json(
-      { success: true, data: post },
-      { headers: corsHeaders }
-    );
-  } catch (error) {
-    console.error('Error fetching blog post by slug:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch post' },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
-    );
+    return createSecureResponse({ success: true, data: post }, request);
+  } catch (error: any) {
+    console.error('Error fetching blog post by slug:', process.env.NODE_ENV === 'development' ? error : 'Error');
+    return createErrorResponse(error, request, 500);
   }
 }
 

@@ -17,7 +17,7 @@ export function initializeRealtimeServer(httpServer: HTTPServer) {
 
   io = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       methods: ['GET', 'POST'],
     },
   });

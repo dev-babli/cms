@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         type: 'recovery',
         email: email,
         options: {
-          redirectTo: `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
         },
       });
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             type: 'recovery',
             email: email,
             options: {
-              redirectTo: `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
+              redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3001'}/auth/reset-password`,
             },
           });
         }

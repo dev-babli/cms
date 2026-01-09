@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/cms/rich-text-editor";
 import type { JobPosting } from "@/lib/cms/types";
 
 export default function EditJobPage() {
@@ -161,24 +162,20 @@ export default function EditJobPage() {
 
             <div>
               <label className={labelClass}>Description</label>
-              <textarea
-                className={textareaClass}
-                name="description"
-                value={job.description ?? ""}
-                onChange={handleChange}
-                rows={4}
+              <RichTextEditor
+                content={job.description ?? ""}
+                onChange={(content) => setJob((prev) => ({ ...prev!, description: content }))}
+                placeholder="Enter job description..."
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Requirements</label>
-                <textarea
-                  className={textareaClass}
-                  name="requirements"
-                  value={job.requirements ?? ""}
-                  onChange={handleChange}
-                  rows={4}
+                <RichTextEditor
+                  content={job.requirements ?? ""}
+                  onChange={(content) => setJob((prev) => ({ ...prev!, requirements: content }))}
+                  placeholder="Enter job requirements..."
                 />
               </div>
               <div>

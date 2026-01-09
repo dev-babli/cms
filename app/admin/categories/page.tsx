@@ -19,7 +19,7 @@ export default function CategoriesList() {
         name: "",
         slug: "",
         description: "",
-        content_type: "blog" as "blog" | "ebook" | "case_study" | "whitepaper" | "all",
+        content_type: "blog" as "blog" | "ebook" | "case_study" | "all",
         color: "#3b82f6",
         icon: "",
     });

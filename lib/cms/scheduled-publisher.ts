@@ -4,7 +4,7 @@
  */
 
 import db from '../db';
-import { blogPosts, ebooks, caseStudies, whitepapers } from './api';
+import { blogPosts, ebooks, caseStudies } from './api';
 
 interface PublishResult {
     content_type: string;
@@ -118,38 +118,6 @@ export async function publishScheduledContent(): Promise<PublishResult[]> {
             }
         }
 
-        // Publish scheduled Whitepapers
-        const scheduledWhitepapers = await db.prepare(`
-      SELECT id, title, scheduled_publish_date 
-      FROM whitepapers 
-      WHERE scheduled_publish_date IS NOT NULL 
-        AND scheduled_publish_date <= ? 
-        AND published = false
-    `).all(now);
-
-        for (const whitepaper of scheduledWhitepapers as any[]) {
-            try {
-                await whitepapers.update(whitepaper.id, {
-                    published: true,
-                    publish_date: whitepaper.scheduled_publish_date,
-                });
-                results.push({
-                    content_type: 'whitepaper',
-                    content_id: whitepaper.id,
-                    title: whitepaper.title,
-                    published: true,
-                });
-            } catch (error: any) {
-                results.push({
-                    content_type: 'whitepaper',
-                    content_id: whitepaper.id,
-                    title: whitepaper.title,
-                    published: false,
-                    error: error.message,
-                });
-            }
-        }
-
         return results;
     } catch (error: any) {
         console.error('Error in scheduled publishing:', error);
@@ -164,7 +132,7 @@ export async function getScheduledContentCount(): Promise<number> {
     const now = new Date().toISOString();
 
     try {
-        const [blogs, ebooks, caseStudies, whitepapers] = await Promise.all([
+        const [blogs, ebooks, caseStudies] = await Promise.all([
             db.prepare(`
         SELECT COUNT(*) as count 
         FROM blog_posts 
@@ -186,20 +154,12 @@ export async function getScheduledContentCount(): Promise<number> {
           AND scheduled_publish_date <= ? 
           AND published = false
       `).get(now),
-            db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM whitepapers 
-        WHERE scheduled_publish_date IS NOT NULL 
-          AND scheduled_publish_date <= ? 
-          AND published = false
-      `).get(now),
         ]);
 
         const total =
             ((blogs as any)?.count || 0) +
             ((ebooks as any)?.count || 0) +
-            ((caseStudies as any)?.count || 0) +
-            ((whitepapers as any)?.count || 0);
+            ((caseStudies as any)?.count || 0);
 
         return total;
     } catch (error: any) {

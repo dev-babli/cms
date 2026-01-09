@@ -24,8 +24,10 @@ import CharacterCount from '@tiptap/extension-character-count';
 import Dropcursor from '@tiptap/extension-dropcursor';
 import Gapcursor from '@tiptap/extension-gapcursor';
 import Mention from '@tiptap/extension-mention';
+// 2026: TextStyle is a named export in Tiptap 3.x
+import { TextStyle } from '@tiptap/extension-text-style';
 import { Button } from '@/components/ui/button';
-import { Instagram, Twitter, TikTok, FontSize, FontFamily } from '@/lib/tiptap/extensions';
+import { Instagram, Twitter, TikTok, FontSize, FontFamily, FormBuilder, Accordion, Dropdown } from '@/lib/tiptap/extensions';
 import { MediaUpload } from './media-upload';
 import { ColorPicker } from './color-picker';
 import { EmojiPickerButton } from './emoji-picker';
@@ -62,7 +64,8 @@ import {
     Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, Smile, MoreHorizontal,
     FileText, Layout, Printer, Keyboard, Settings, AlignJustify as AlignJustifyIcon,
     Indent, Outdent, Calendar, Hash, Bookmark, FileX, Grid, FileEdit,
-    ZoomIn, ZoomOut, Maximize, Minimize, Square
+    ZoomIn, ZoomOut, Maximize, Minimize, Square, FormInput, ChevronDown, HelpCircle,
+    ListChecks, FileQuestion
 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -121,6 +124,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                     },
                 },
             }),
+            TextStyle,
             FontSize,
             FontFamily,
             TextAlign.configure({
@@ -228,6 +232,9 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
             Instagram,
             Twitter,
             TikTok,
+            FormBuilder,
+            Accordion,
+            Dropdown,
         ],
         content,
         onUpdate: ({ editor }) => {
@@ -236,7 +243,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         editorProps: {
             attributes: {
                 class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[500px] p-8 max-w-none bg-white transition-all duration-300 ${
-                    viewMode === 'print' ? 'max-w-4xl mx-auto shadow-lg' : 
+                    viewMode === 'print' ? 'max-w-4xl mx-auto' : 
                     viewMode === 'web' ? 'max-w-6xl mx-auto' : 
                     'max-w-full'
                 }`,
@@ -247,6 +254,13 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
             },
         },
     });
+
+    // Sync content when prop changes
+    useEffect(() => {
+        if (editor && !editor.isDestroyed && content !== editor.getHTML()) {
+            editor.commands.setContent(content, false);
+        }
+    }, [content, editor]);
 
     useEffect(() => {
         if (editor && !editor.isDestroyed) {
@@ -376,6 +390,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         );
     }
 
+    // Sanity Studio Design - Minimal Toolbar Button
     const ToolbarButton = ({ 
         onClick, 
         isActive = false, 
@@ -397,11 +412,11 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
             type="button"
             onClick={onClick}
             className={`
-                relative flex items-center justify-center gap-1.5 px-3 py-2 rounded-md
-                transition-all duration-200 text-sm font-medium
+                relative flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md
+                transition-colors duration-150 ease-out text-sm font-medium
                 ${isActive 
-                    ? 'bg-primary text-primary-foreground shadow-md scale-105 ring-2 ring-primary/20' 
-                    : 'bg-transparent hover:bg-muted text-foreground hover:text-primary hover:scale-105 active:scale-95'
+                    ? 'bg-[#F9FAFB] text-[#111827]' 
+                    : 'bg-transparent hover:bg-[#F9FAFB] text-[#6B7280] hover:text-[#111827]'
                 }
                 ${className}
             `}
@@ -426,16 +441,16 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
     const editorClasses = isFullscreen
         ? 'fixed inset-0 z-50 bg-white'
-        : 'border border-border rounded-xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 relative w-full max-w-full';
+        : 'border border-[#E5E7EB] rounded-md overflow-hidden bg-white relative w-full max-w-full';
 
     return (
         <div className={editorClasses}>
             {!isFocusMode && (
                 <>
                     {/* Ribbon-Style Toolbar */}
-                    <div className="bg-gradient-to-b from-slate-50 via-white to-slate-50/50 border-b border-border shadow-sm">
+                    <div className="bg-white border-b border-[#E5E7EB]">
                         {/* Tab Navigation */}
-                        <div className="flex items-center border-b border-border bg-gradient-to-r from-white to-slate-50/30 overflow-x-auto smooth-scroll">
+                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto">
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -473,10 +488,10 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('design');
                                 }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'design'
-                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
                                 }`}
                             >
                                 Design
@@ -488,10 +503,10 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('layout');
                                 }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'layout'
-                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
                                 }`}
                             >
                                 Layout
@@ -503,10 +518,10 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('review');
                                 }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'review'
-                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
                                 }`}
                             >
                                 Review
@@ -531,7 +546,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                         </div>
 
                         {/* Tab Content */}
-                        <div className="p-4 bg-white/50 backdrop-blur-sm min-h-[64px] overflow-x-auto smooth-scroll">
+                        <div className="p-4 bg-white min-h-[64px] overflow-x-auto border-b border-[#E5E7EB]">
                             {activeTab === 'home' && (
                                 <div className="flex items-center gap-3 flex-wrap">
                                     {/* Clipboard Group */}
@@ -570,10 +585,15 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                         <select
                                             onChange={(e) => {
                                                 const family = e.target.value;
+                                                if (!editor) return;
                                                 if (family === 'default') {
                                                     editor.chain().focus().unsetFontFamily().run();
                                                 } else {
-                                                    editor.chain().focus().setFontFamily(family).run();
+                                                    try {
+                                                        editor.chain().focus().setFontFamily(family).run();
+                                                    } catch (error) {
+                                                        console.error('Error setting font family:', error);
+                                                    }
                                                 }
                                             }}
                                             className="h-9 px-3 text-sm border border-border bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[120px] transition-all duration-200 hover:border-primary/50"
@@ -591,10 +611,15 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                         <select
                                             onChange={(e) => {
                                                 const size = e.target.value;
+                                                if (!editor) return;
                                                 if (size === 'default') {
                                                     editor.chain().focus().unsetFontSize().run();
                                                 } else {
-                                                    editor.chain().focus().setFontSize(size).run();
+                                                    try {
+                                                        editor.chain().focus().setFontSize(size).run();
+                                                    } catch (error) {
+                                                        console.error('Error setting font size:', error);
+                                                    }
                                                 }
                                             }}
                                             className="h-9 px-3 text-sm border border-border bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[80px] transition-all duration-200 hover:border-primary/50"
@@ -719,6 +744,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                                 label=""
                                                 isActive={editor.isActive('bulletList')}
                                                 className="h-9 w-9"
+                                                title="Bullet List"
                                             />
                                             <ToolbarButton
                                                 onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -726,6 +752,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                                 label=""
                                                 isActive={editor.isActive('orderedList')}
                                                 className="h-9 w-9"
+                                                title="Numbered List"
                                             />
                                             <ToolbarButton
                                                 onClick={() => editor.chain().focus().toggleTaskList().run()}
@@ -733,6 +760,14 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                                 label=""
                                                 isActive={editor.isActive('taskList')}
                                                 className="h-9 w-9"
+                                                title="Task List"
+                                            />
+                                            <ToolbarButton
+                                                onClick={() => editor.chain().focus().setAccordion({ title: 'FAQ Item', open: false }).run()}
+                                                icon={ListChecks}
+                                                label=""
+                                                className="h-9 w-9"
+                                                title="FAQ Accordion"
                                             />
                                         </div>
                                     </ToolbarGroup>
@@ -896,6 +931,27 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                         />
                                     </ToolbarGroup>
 
+                                    <ToolbarGroup title="Forms & Interactive">
+                                        <ToolbarButton
+                                            onClick={() => editor.chain().focus().setFormBuilder().run()}
+                                            icon={FormInput}
+                                            label="Form"
+                                            className="h-9"
+                                        />
+                                        <ToolbarButton
+                                            onClick={() => editor.chain().focus().setDropdown().run()}
+                                            icon={ChevronDown}
+                                            label="Dropdown"
+                                            className="h-9"
+                                        />
+                                        <ToolbarButton
+                                            onClick={() => editor.chain().focus().setAccordion({ title: 'FAQ Question', open: false }).run()}
+                                            icon={HelpCircle}
+                                            label="FAQ"
+                                            className="h-9"
+                                        />
+                                    </ToolbarGroup>
+
                                     <ToolbarGroup>
                                         <EmojiPickerButton onEmojiClick={handleEmojiClick} />
                                     </ToolbarGroup>
@@ -1052,14 +1108,14 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
                     {/* Find & Replace - Inline */}
                     {showFindReplace && (
-                        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white border border-border rounded-lg shadow-2xl p-4 mx-4 max-h-[400px] overflow-y-auto smooth-scroll animate-in slide-in-from-top-2 fade-in-0 duration-200" style={{ maxWidth: 'calc(100% - 2rem)' }}>
+                        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white border border-[#E5E7EB] rounded-md p-4 mx-4 max-h-[400px] overflow-y-auto" style={{ maxWidth: 'calc(100% - 2rem)' }}>
                             <FindReplace editor={editor} onClose={() => setShowFindReplace(false)} />
                         </div>
                     )}
 
                     {/* Table Menu - Inline */}
                     {showTableMenu && (
-                        <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-border rounded-lg shadow-2xl p-4 min-w-[300px] max-w-[500px] max-h-[500px] overflow-y-auto smooth-scroll animate-in slide-in-from-top-2 fade-in-0 duration-200" style={{ maxWidth: 'min(500px, calc(100vw - 2rem))' }}>
+                        <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-[#E5E7EB] rounded-md p-4 min-w-[300px] max-w-[500px] max-h-[500px] overflow-y-auto" style={{ maxWidth: 'min(500px, calc(100vw - 2rem))' }}>
                             <TableMenu editor={editor} onClose={() => setShowTableMenu(false)} />
                         </div>
                     )}
@@ -1107,7 +1163,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
                     {/* Image Upload Panel - Inline */}
                     {showImageUpload && (
-                        <div className="p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-b border-border animate-in slide-in-from-top-2 fade-in-0 duration-200">
+                        <div className="p-4 bg-white border-b border-[#E5E7EB]">
                             <MediaUpload
                                 type="image"
                                 onUpload={(url) => {
@@ -1124,7 +1180,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
                     {/* Video Upload Panel - Inline */}
                     {showVideoUpload && (
-                        <div className="p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-b border-border animate-in slide-in-from-top-2 fade-in-0 duration-200">
+                        <div className="p-4 bg-white border-b border-[#E5E7EB]">
                             <MediaUpload
                                 type="video"
                                 onUpload={(url) => {
@@ -1141,14 +1197,14 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
                     {/* Source Code View */}
                     {showSourceCode ? (
-                        <div className="p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-[500px]">
+                        <div className="p-6 bg-white min-h-[500px] border border-[#E5E7EB] rounded-md">
                             <div className="mb-4 flex items-center justify-between">
-                                <h3 className="text-white font-semibold text-sm">Source Code</h3>
+                                <h3 className="text-[#111827] font-medium text-sm">Source Code</h3>
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => navigator.clipboard.writeText(editor.getHTML())}
-                                    className="text-white hover:bg-slate-700/50 transition-colors h-8"
+                                    className="text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827] transition-colors duration-150 ease-out h-8"
                                 >
                                     Copy HTML
                                 </Button>
@@ -1156,7 +1212,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                             <textarea
                                 value={editor.getHTML()}
                                 onChange={(e) => editor.commands.setContent(e.target.value)}
-                                className="w-full h-[500px] font-mono text-sm text-green-400 bg-slate-950 border border-slate-700 rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none smooth-scroll"
+                                className="w-full h-[500px] font-mono text-sm text-[#111827] bg-white border border-[#E5E7EB] rounded-md p-4 focus:outline-none focus:ring-1 focus:ring-[#3B82F6] resize-none"
                                 style={{ minHeight: '500px' }}
                             />
                         </div>
@@ -1200,7 +1256,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                             variant="ghost"
                             size="sm"
                             onClick={toggleFocusMode}
-                            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-sm shadow-md"
+                            className="h-8 px-3 text-xs bg-white border border-[#E5E7EB]"
                         >
                             <EyeOff className="w-4 h-4 mr-2" />
                             Exit Focus

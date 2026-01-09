@@ -1,5 +1,7 @@
 import { createYoga, createSchema } from 'graphql-yoga';
 import { blogPosts, teamMembers } from '@/lib/cms/api';
+import { NextRequest } from 'next/server';
+import { getCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
 
 const typeDefs = `
   type BlogPost {
@@ -97,37 +99,46 @@ const yoga = createYoga({
   fetchAPI: { Response },
 });
 
-// CORS headers for React app integration
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
 // Handle CORS preflight
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: corsHeaders,
+export async function OPTIONS(request: NextRequest) {
+  const preflightResponse = handleCorsPreflight(request, {
+    allowedMethods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  if (preflightResponse) {
+    return preflightResponse;
+  }
+  return new Response(null, { status: 403 });
 }
 
 // Properly typed handlers for Next.js 15 with CORS
-export async function GET(request: Request) {
-  const response = await yoga.fetch(request);
+export async function GET(request: NextRequest) {
+  const response = await yoga.fetch(request as any);
   // Add CORS headers to response
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value);
+  const corsHeaders = getCorsHeaders(request, {
+    allowedMethods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  if (corsHeaders) {
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+  }
   return response;
 }
 
-export async function POST(request: Request) {
-  const response = await yoga.fetch(request);
+export async function POST(request: NextRequest) {
+  const response = await yoga.fetch(request as any);
   // Add CORS headers to response
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value);
+  const corsHeaders = getCorsHeaders(request, {
+    allowedMethods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  if (corsHeaders) {
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+  }
   return response;
 }
 
