@@ -45,17 +45,18 @@ export const blogPosts = {
   },
   
   create: async (post: Omit<BlogPost, 'id'> | any) => {
-    const stmt = db.prepare(`
+    // Use PostgreSQL syntax with $1, $2, etc. placeholders
+    const sql = `
       INSERT INTO blog_posts (
         slug, title, excerpt, content, author, featured_image, banner_image, category, tags, 
         published, publish_date, scheduled_publish_date,
         meta_title, meta_description, meta_keywords, canonical_url,
         og_title, og_description, og_image, og_type, schema_markup, created_by
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
-    `);
-    return await stmt.run(
+    `;
+    const values = [
       post.slug, 
       post.title, 
       post.excerpt || '', 
@@ -79,7 +80,10 @@ export const blogPosts = {
       post.og_type || 'article',
       post.schema_markup || null,
       post.created_by || null
-    );
+    ];
+    const result = await query(sql, values);
+    // Return in the same format as before for compatibility
+    return { row: result?.rows?.[0] || null, rows: result?.rows || [] };
   },
   
   update: async (id: number, post: Partial<BlogPost>) => {

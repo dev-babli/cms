@@ -286,8 +286,8 @@ export default function NewBlogPost() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => {
-                                    // Encode form data and pass to preview page
-                                    const previewData = encodeURIComponent(JSON.stringify({
+                                    // Store preview data in sessionStorage to avoid URL length limits
+                                    const previewData = {
                                         title: formData.title,
                                         slug: formData.slug || 'preview',
                                         excerpt: formData.excerpt,
@@ -297,8 +297,14 @@ export default function NewBlogPost() {
                                         tags: formData.tags,
                                         featured_image: formData.featured_image,
                                         banner_image: formData.banner_image,
-                                    }));
-                                    const previewUrl = `/admin/blog/preview?data=${previewData}`;
+                                    };
+                                    // Store in sessionStorage with timestamp
+                                    const storageKey = `blog_preview_${Date.now()}`;
+                                    sessionStorage.setItem(storageKey, JSON.stringify(previewData));
+                                    // Also store the key for the preview page to retrieve
+                                    sessionStorage.setItem('current_preview_key', storageKey);
+                                    // Open preview page without query parameters
+                                    const previewUrl = `/admin/blog/preview`;
                                     window.open(previewUrl, '_blank');
                                 }}
                                 disabled={!formData.title}

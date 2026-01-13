@@ -226,7 +226,8 @@ export default function NewJobPage() {
                 variant="outline"
                 onClick={() => {
                   // Create preview with form data
-                  const previewData = encodeURIComponent(JSON.stringify({
+                  // Store preview data in sessionStorage to avoid URL length limits
+                  const previewData = {
                     title: job.title,
                     slug: job.slug || 'preview',
                     location: job.location,
@@ -238,8 +239,14 @@ export default function NewJobPage() {
                     requirements: job.requirements,
                     skills: job.skills,
                     apply_url: job.apply_url,
-                  }));
-                  const previewUrl = `/admin/jobs/preview?data=${previewData}`;
+                  };
+                  // Store in sessionStorage with timestamp
+                  const storageKey = `job_preview_${Date.now()}`;
+                  sessionStorage.setItem(storageKey, JSON.stringify(previewData));
+                  // Also store the key for the preview page to retrieve
+                  sessionStorage.setItem('current_preview_key', storageKey);
+                  // Open preview page without query parameters
+                  const previewUrl = `/admin/jobs/preview`;
                   window.open(previewUrl, '_blank');
                 }}
                 disabled={!job.title}

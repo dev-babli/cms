@@ -10,13 +10,41 @@ function JobPreviewContent() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // First try to get from sessionStorage (new method - avoids URL length limits)
+        const storageKey = sessionStorage.getItem('current_preview_key');
+        if (storageKey) {
+            try {
+                const stored = sessionStorage.getItem(storageKey);
+                if (stored) {
+                    const decoded = JSON.parse(stored);
+                    setPreviewData(decoded);
+                    // Clean up old preview keys (keep only last 3)
+                    const allKeys = Object.keys(sessionStorage).filter(k => k.startsWith('job_preview_'));
+                    if (allKeys.length > 3) {
+                        allKeys.sort().slice(0, allKeys.length - 3).forEach(k => sessionStorage.removeItem(k));
+                    }
+                    setLoading(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to parse preview data from sessionStorage:', error);
+            }
+        }
+        
+        // Fallback to URL parameter (for backward compatibility)
         const dataParam = searchParams.get('data');
         if (dataParam) {
             try {
+                // Check if URL is too long
+                if (dataParam.length > 2000) {
+                    console.warn('Preview URL too long, please use the Preview button again');
+                    setLoading(false);
+                    return;
+                }
                 const decoded = JSON.parse(decodeURIComponent(dataParam));
                 setPreviewData(decoded);
             } catch (error) {
-                console.error('Failed to parse preview data:', error);
+                console.error('Failed to parse preview data from URL:', error);
             }
         }
         setLoading(false);
