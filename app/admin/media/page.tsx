@@ -95,63 +95,76 @@ export default function MediaPage() {
         setUploading(true);
 
         try {
-            const formData = new FormData();
-            Array.from(files).forEach(file => {
-                formData.append('files', file);
-            });
+            // Upload files one by one to /api/upload endpoint
+            const uploadPromises = Array.from(files).map(async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
 
-            const res = await fetch('/api/admin/media', {
-                method: 'POST',
-                body: formData,
-                credentials: 'include' // Include authentication cookies
-            });
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include' // Include authentication cookies
+                });
 
-            if (!res.ok) {
-                let errorMessage = `Upload failed (${res.status})`;
-                try {
-                    // Try to read error response
-                    const contentType = res.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        const errorData = await res.json();
-                        errorMessage = errorData.error || errorData.message || errorMessage;
-                    } else {
-                        const errorText = await res.text();
-                        if (errorText && errorText.trim()) {
-                            // Try to parse as JSON even if content-type doesn't say so
-                            try {
-                                const errorData = JSON.parse(errorText);
-                                errorMessage = errorData.error || errorData.message || errorMessage;
-                            } catch {
-                                errorMessage = errorText.substring(0, 200) || res.statusText || errorMessage;
-                            }
+                if (!res.ok) {
+                    let errorMessage = `Upload failed (${res.status})`;
+                    try {
+                        const contentType = res.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const errorData = await res.json();
+                            errorMessage = errorData.error || errorData.message || errorMessage;
                         } else {
-                            errorMessage = res.statusText || `HTTP ${res.status}` || errorMessage;
+                            const errorText = await res.text();
+                            if (errorText && errorText.trim()) {
+                                try {
+                                    const errorData = JSON.parse(errorText);
+                                    errorMessage = errorData.error || errorData.message || errorMessage;
+                                } catch {
+                                    errorMessage = errorText.substring(0, 200) || res.statusText || errorMessage;
+                                }
+                            } else {
+                                errorMessage = res.statusText || `HTTP ${res.status}` || errorMessage;
+                            }
                         }
+                    } catch (error: any) {
+                        errorMessage = res.statusText || `HTTP ${res.status}` || 'Network error occurred';
+                        console.error("Error reading error response:", error?.message || error);
                     }
-                } catch (error: any) {
-                    // If we can't read the response, use status info
-                    errorMessage = res.statusText || `HTTP ${res.status}` || 'Network error occurred';
-                    console.error("Error reading error response:", error?.message || error);
+                    throw new Error(errorMessage);
                 }
-                alert(`Upload failed: ${errorMessage}`);
-                return;
+
+                const responseText = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error("Failed to parse response:", parseError);
+                    throw new Error('Invalid response from server');
+                }
+
+                if (data.success && data.data) {
+                    return { success: true, filename: file.name };
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            });
+
+            // Wait for all uploads to complete
+            const results = await Promise.allSettled(uploadPromises);
+            const successful = results.filter(r => r.status === 'fulfilled').length;
+            const failed = results
+                .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+                .map(r => r.reason);
+
+            if (successful > 0) {
+                // Refresh media list to show newly uploaded files
+                await fetchMedia();
             }
 
-            const responseText = await res.text();
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error("Failed to parse response:", parseError);
-                alert('Upload completed but received invalid response from server');
-                fetchMedia(); // Refresh the media list
-                return;
-            }
-
-            if (data.success && data.data) {
-                setMedia(prev => [...data.data, ...prev]);
-            } else {
-                alert(`Upload failed: ${data.error || 'Unknown error'}`);
+            if (failed.length > 0) {
+                alert(`Failed to upload ${failed.length} file(s): ${failed.map(f => f.message || String(f)).join(', ')}`);
+            } else if (successful > 0) {
+                // Success - media list already refreshed
             }
         } catch (error: any) {
             console.error("Upload failed:", error);
@@ -401,8 +414,8 @@ export default function MediaPage() {
                                 disabled={uploading}
                             />
                             <label htmlFor="file-upload">
-                                <Button asChild disabled={uploading}>
-                                    <span>Choose Files</span>
+                                <Button disabled={uploading} type="button">
+                                    Choose Files
                                 </Button>
                             </label>
                         </div>

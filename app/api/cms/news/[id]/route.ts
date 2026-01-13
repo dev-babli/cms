@@ -137,9 +137,19 @@ export async function DELETE(
       return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
     }
     
-    await news.delete(newsId);
+    const result = await news.delete(newsId);
+    console.log('✅ [Delete News] Delete result:', result);
     
-    return createSecureResponse({ success: true, message: 'News item deleted successfully' }, request);
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete News] No rows deleted.');
+      return createErrorResponse('News item not found or already deleted', request, 404);
+    }
+    
+    return createSecureResponse({ 
+      success: true, 
+      message: 'News item deleted successfully',
+      data: { id: newsId, deleted: true } 
+    }, request);
   } catch (error: any) {
     console.error('❌ News API Error:', process.env.NODE_ENV === 'development' ? error : 'Error deleting news item');
     return createErrorResponse(error, request, 500);

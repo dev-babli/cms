@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AdminAccessDenied } from "@/components/admin-access-denied";
 
 interface User {
     id: number | string;
@@ -23,6 +24,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
+    const [currentUserRole, setCurrentUserRole] = useState<User['role'] | null>(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [createLoading, setCreateLoading] = useState(false);
     const [error, setError] = useState("");
@@ -39,27 +41,52 @@ export default function UsersPage() {
 
     const checkAuth = async () => {
         try {
-            const res = await fetch("/api/auth/check");
+            const res = await fetch("/api/auth/me", { credentials: 'include' });
             if (res.ok) {
-                setAuthenticated(true);
-                fetchUsers();
+                const data = await res.json();
+                if (data.success && data.data?.user) {
+                    setAuthenticated(true);
+                    setCurrentUserRole(data.data.user.role);
+                    // Only fetch users if admin
+                    if (data.data.user.role === 'admin') {
+                        fetchUsers();
+                    }
+                } else {
+                    router.push("/auth/login");
+                }
             } else {
                 router.push("/auth/login");
             }
         } catch (error) {
+            console.error("Auth check failed:", error);
             router.push("/auth/login");
+        } finally {
+            setLoading(false);
         }
     };
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch("/api/admin/users");
+            const res = await fetch("/api/admin/users", { 
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
             const data = await res.json();
+            
             if (data.success) {
-                setUsers(data.data);
+                setUsers(data.data || []);
+                setError(""); // Clear any previous errors
+            } else if (data.error) {
+                setError(data.error);
+                console.error("Fetch users error:", data);
             }
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch users. Please check your connection.";
+            setError(errorMessage);
+            console.error("Fetch users network error:", error);
         } finally {
             setLoading(false);
         }
@@ -74,6 +101,7 @@ export default function UsersPage() {
             const res = await fetch("/api/admin/users", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify(createFormData),
             });
 
@@ -83,29 +111,58 @@ export default function UsersPage() {
                 setUsers([data.data, ...users]);
                 setCreateFormData({ name: "", email: "", password: "", role: "author" });
                 setShowCreateForm(false);
+                setError(""); // Clear any previous errors
             } else {
                 setError(data.error || "Failed to create user");
+                console.error("Create user error:", data);
             }
-        } catch (error) {
-            setError("Network error. Please try again.");
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Create user network error:", error);
         } finally {
             setCreateLoading(false);
         }
     };
 
     const handleDeleteUser = async (userId: number | string) => {
-        if (!confirm("Are you sure you want to delete this user?")) return;
+        if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
 
+        setError("");
+        setCreateLoading(true);
         try {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "DELETE",
+                credentials: "include",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
 
-            if (res.ok) {
-                setUsers(users.filter(user => user.id !== userId));
+            let data;
+            try {
+                data = await res.json();
+            } catch (parseError) {
+                const text = await res.text();
+                console.error("Non-JSON response:", text);
+                setError(`Server error: ${res.status} ${res.statusText}`);
+                return;
             }
-        } catch (error) {
-            console.error("Failed to delete user:", error);
+
+            if (res.ok && data.success) {
+                setUsers(users.filter(user => user.id !== userId));
+                setError(""); // Clear any previous errors
+            } else {
+                const errorMsg = data.error || data.message || `Failed to delete user (${res.status})`;
+                setError(errorMsg);
+                console.error("Delete user error:", errorMsg, data);
+            }
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Delete user network error:", errorMessage, error);
+        } finally {
+            setCreateLoading(false);
         }
     };
 
@@ -114,16 +171,24 @@ export default function UsersPage() {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ status }),
             });
 
-            if (res.ok) {
+            const data = await res.json();
+
+            if (res.ok && data.success) {
                 setUsers(users.map(user =>
                     user.id === userId ? { ...user, status: status as any } : user
                 ));
+            } else {
+                setError(data.error || "Failed to update user status");
+                console.error("Update status error:", data);
             }
-        } catch (error) {
-            console.error("Failed to update user:", error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Update status network error:", error);
         }
     };
 
@@ -132,25 +197,24 @@ export default function UsersPage() {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ role }),
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    setUsers(users.map(user =>
-                        user.id === userId ? { ...user, role: role as any } : user
-                    ));
-                } else {
-                    alert(data.error || "Failed to update user role");
-                }
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                setUsers(users.map(user =>
+                    user.id === userId ? { ...user, role: role as any } : user
+                ));
             } else {
-                const errorData = await res.json();
-                alert(errorData.error || "Failed to update user role");
+                setError(data.error || "Failed to update user role");
+                console.error("Update role error:", data);
             }
-        } catch (error) {
-            console.error("Failed to update user role:", error);
-            alert("Failed to update user role. Please try again.");
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Update role network error:", error);
         }
     };
 
@@ -179,16 +243,24 @@ export default function UsersPage() {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ status: 'active' }),
             });
 
-            if (res.ok) {
+            const data = await res.json();
+
+            if (res.ok && data.success) {
                 setUsers(users.map(user =>
                     user.id === userId ? { ...user, status: 'active' as any } : user
                 ));
+            } else {
+                setError(data.error || "Failed to approve user");
+                console.error("Approve user error:", data);
             }
-        } catch (error) {
-            console.error("Failed to approve user:", error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Approve user network error:", error);
         }
     };
 
@@ -198,13 +270,21 @@ export default function UsersPage() {
         try {
             const res = await fetch(`/api/admin/users/${userId}`, {
                 method: "DELETE",
+                credentials: "include",
             });
 
-            if (res.ok) {
+            const data = await res.json();
+
+            if (res.ok && data.success) {
                 setUsers(users.filter(user => user.id !== userId));
+            } else {
+                setError(data.error || "Failed to reject user");
+                console.error("Reject user error:", data);
             }
-        } catch (error) {
-            console.error("Failed to reject user:", error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            setError(errorMessage);
+            console.error("Reject user network error:", error);
         }
     };
 
@@ -220,6 +300,11 @@ export default function UsersPage() {
                 </div>
             </div>
         );
+    }
+
+    // Show access denied if user is not admin
+    if (currentUserRole !== 'admin') {
+        return <AdminAccessDenied userRole={currentUserRole || 'viewer'} />;
     }
 
     return (
@@ -438,9 +523,10 @@ export default function UsersPage() {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <button
                                                 onClick={() => handleDeleteUser(user.id)}
-                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200"
+                                                disabled={createLoading}
+                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                Delete
+                                                {createLoading ? "Deleting..." : "Delete"}
                                             </button>
                                         </td>
                                     </tr>
@@ -466,7 +552,7 @@ export default function UsersPage() {
                                 </button>
                             </div>
 
-                            {error && (
+                            {(error || (createFormData.name && createFormData.email)) && error && (
                                 <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
                                     <p className="text-sm text-red-600 font-medium">{error}</p>
                                 </div>

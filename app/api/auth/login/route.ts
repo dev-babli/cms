@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
 import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
+import { recordLoginAttempt } from '@/lib/security/login-attempts';
 
 // SECURITY: Login validation - only validate format, not complexity
 // Password complexity is enforced on registration/password change, not login
@@ -70,6 +71,9 @@ export async function POST(request: NextRequest) {
         }
       }
       
+      // Record failed login attempt
+      await recordLoginAttempt(request, email, false, undefined, errorMessage);
+      
       const errorResponse = NextResponse.json(
         { success: false, error: errorMessage },
         { status: 401 }
@@ -77,6 +81,13 @@ export async function POST(request: NextRequest) {
       return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
     }
 
+    // Record successful login attempt
+    await recordLoginAttempt(request, email, true, {
+      id: authData.user.id,
+      name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
+      role: authData.user.user_metadata?.role || 'author',
+    });
+    
     // Success - Supabase Auth handles everything
     const isProduction = process.env.NODE_ENV === 'production';
     

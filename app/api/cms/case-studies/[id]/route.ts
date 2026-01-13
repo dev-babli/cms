@@ -132,8 +132,19 @@ export async function DELETE(
       return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
     }
     
-    await caseStudies.delete(caseStudyId);
-    return createSecureResponse({ success: true }, request);
+    const result = await caseStudies.delete(caseStudyId);
+    console.log('✅ [Delete Case Study] Delete result:', result);
+    
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete Case Study] No rows deleted.');
+      return createErrorResponse('Case study not found or already deleted', request, 404);
+    }
+    
+    return createSecureResponse({ 
+      success: true, 
+      message: 'Case study deleted successfully',
+      data: { id: caseStudyId, deleted: true } 
+    }, request);
   } catch (error: any) {
     return createErrorResponse(error, request, 500);
   }

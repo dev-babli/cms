@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // swcMinify is enabled by default in Next.js 15
   // Removed outputFileTracingRoot to fix Vercel deployment path issues
+  
+  // CDN and caching optimizations
+  experimental: {
+    // Enable edge runtime for better CDN performance
+    // edge: true, // Uncomment if you want edge runtime for API routes
+  },
 };
 
 export default nextConfig;

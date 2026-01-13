@@ -4,12 +4,9 @@ import { BlogPostSchema } from '@/lib/cms/types';
 import { z } from 'zod';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 
-// Route segment config - ensure this route is dynamic
-export const dynamic = 'force-dynamic';
+// Route segment config - use caching for better performance
+export const revalidate = 60; // Revalidate every 60 seconds
 export const runtime = 'nodejs';
-
-// Ensure this route is always treated as an API route
-export const revalidate = 0;
 
 import { handleCorsPreflight, applyCorsHeaders } from '@/lib/security/cors';
 import { getCurrentUser } from '@/lib/auth/server';
@@ -18,10 +15,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const published = searchParams.get('published') === 'true';
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
     
     let posts;
     try {
-      posts = await blogPosts.getAll(published);
+      // Performance: Pass limit to avoid fetching all posts
+      posts = await blogPosts.getAll(published, limit);
     } catch (dbError: any) {
       console.error('❌ Database error in blogPosts.getAll:', dbError);
       // Return JSON error instead of crashing
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       { success: true, data: normalizedPosts },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate', // Prevent caching
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120', // Cache for 60s, allow stale for 120s
         },
       }
     );

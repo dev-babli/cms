@@ -10,3 +10,7 @@ ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS banner_image TEXT;
 
 
 
+
+
+
+

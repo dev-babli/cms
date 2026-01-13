@@ -135,7 +135,6 @@ function JobPreviewContent() {
                                 [&_sup]:text-xs [&_sup]:align-super
                                 [&_span[style*='color']]:[color:inherit]
                                 [&_span[style*='background-color']]:[background-color:inherit]
-                                [&_span[style*='font-size']]:[font-size:inherit]
                                 [&_p[style*='text-align']]:[text-align:inherit]
                                 [&_h1[style*='text-align']]:[text-align:inherit]
                                 [&_h2[style*='text-align']]:[text-align:inherit]
@@ -181,7 +180,6 @@ function JobPreviewContent() {
                                 [&_sup]:text-xs [&_sup]:align-super
                                 [&_span[style*='color']]:[color:inherit]
                                 [&_span[style*='background-color']]:[background-color:inherit]
-                                [&_span[style*='font-size']]:[font-size:inherit]
                                 [&_p[style*='text-align']]:[text-align:inherit]
                                 [&_h1[style*='text-align']]:[text-align:inherit]
                                 [&_h2[style*='text-align']]:[text-align:inherit]
@@ -227,7 +225,6 @@ function JobPreviewContent() {
                                 [&_sup]:text-xs [&_sup]:align-super
                                 [&_span[style*='color']]:[color:inherit]
                                 [&_span[style*='background-color']]:[background-color:inherit]
-                                [&_span[style*='font-size']]:[font-size:inherit]
                                 [&_p[style*='text-align']]:[text-align:inherit]
                                 [&_h1[style*='text-align']]:[text-align:inherit]
                                 [&_h2[style*='text-align']]:[text-align:inherit]

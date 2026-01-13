@@ -14,7 +14,37 @@ export default function AdminError({
 
   useEffect(() => {
     // Log error to error reporting service
-    console.error('Admin error:', error);
+    // Safely log error to prevent additional errors
+    try {
+      let errorMessage = 'Unknown error';
+      let errorStack: string | undefined;
+      
+      // Type guard: check if error is an Error instance
+      if (error instanceof Error) {
+        errorMessage = error.message || 'Unknown error';
+        errorStack = error.stack;
+      } else {
+        // Handle non-Error types (Event, string, etc.)
+        const errorAny = error as any;
+        if (errorAny instanceof Event) {
+          errorMessage = `Browser event error: ${errorAny.type}`;
+        } else if (typeof errorAny === 'string') {
+          errorMessage = errorAny;
+        } else {
+          errorMessage = String(errorAny) || 'Unknown error';
+        }
+      }
+      
+      console.error('Admin error:', {
+        message: errorMessage,
+        stack: errorStack,
+        digest: error?.digest,
+        originalError: error,
+      });
+    } catch (logError) {
+      // Silently fail if logging itself causes an error
+      console.error('Failed to log error:', logError);
+    }
   }, [error]);
 
   // If it's an authentication error, redirect to login
@@ -34,7 +64,16 @@ export default function AdminError({
           </h2>
           <p className="text-gray-600 mb-6">
             {process.env.NODE_ENV === 'development' 
-              ? error.message || 'An error occurred in the admin panel'
+              ? (() => {
+                  if (error instanceof Error) {
+                    return error.message;
+                  }
+                  const errorAny = error as any;
+                  if (errorAny instanceof Event) {
+                    return `Event error: ${errorAny.type}`;
+                  }
+                  return String(errorAny) || 'An error occurred in the admin panel';
+                })()
               : 'An error occurred. Please try logging in again.'}
           </p>
           {error.digest && (

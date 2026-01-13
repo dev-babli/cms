@@ -23,7 +23,8 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
                     const viewportHeight = window.innerHeight;
                     const viewportWidth = window.innerWidth;
                     const toolbarHeight = 50;
-                    const toolbarWidth = 300;
+                    // Responsive toolbar width - smaller on mobile
+                    const toolbarWidth = viewportWidth < 640 ? Math.min(280, viewportWidth - 40) : 300;
                     
                     // Calculate position based on selection midpoint
                     const midTop = (startCoords.top + endCoords.top) / 2;

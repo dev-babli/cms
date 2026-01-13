@@ -28,11 +28,11 @@ export function createSecureResponse(
 export function createErrorResponse(
   error: string | Error,
   request: NextRequest,
-  status: number = 500
+  status: number = 500,
+  options?: { allowCredentials?: boolean }
 ): NextResponse {
-  const errorMessage = error instanceof Error 
-    ? (process.env.NODE_ENV === 'development' ? error.message : 'An error occurred')
-    : (process.env.NODE_ENV === 'development' ? error : 'An error occurred');
+  // Always show the actual error message (not just "An error occurred")
+  const errorMessage = error instanceof Error ? error.message : error;
   
   const response = NextResponse.json(
     { 
@@ -45,7 +45,9 @@ export function createErrorResponse(
     { status }
   );
   
-  return applyCorsHeaders(response, request);
+  return applyCorsHeaders(response, request, { 
+    allowCredentials: options?.allowCredentials ?? true 
+  });
 }
 
 /**

@@ -31,3 +31,7 @@ SELECT
 FROM information_schema.columns
 WHERE table_name = 'news_announcements' AND column_name = 'created_by';
 
+
+
+
+

@@ -248,7 +248,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         },
         editorProps: {
             attributes: {
-                class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[500px] p-8 max-w-none bg-white transition-all duration-300 ${
+                class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[300px] sm:min-h-[500px] p-4 sm:p-6 md:p-8 max-w-none bg-white transition-all duration-300 ${
                     viewMode === 'print' ? 'max-w-4xl mx-auto' : 
                     viewMode === 'web' ? 'max-w-6xl mx-auto' : 
                     'max-w-full'
@@ -517,8 +517,8 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
             type="button"
             onClick={onClick}
             className={`
-                relative flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md
-                transition-colors duration-150 ease-out text-sm font-medium
+                relative flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1.5 rounded-md
+                transition-colors duration-150 ease-out text-xs sm:text-sm font-medium
                 ${isActive 
                     ? 'bg-[#F9FAFB] text-[#111827]' 
                     : 'bg-transparent hover:bg-[#F9FAFB] text-[#6B7280] hover:text-[#111827]'
@@ -529,16 +529,16 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
             aria-label={label}
             aria-pressed={isActive}
         >
-            {Icon && <Icon className="w-4 h-4" />}
+            {Icon && <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />}
             {children}
-            {label && <span className="text-xs">{label}</span>}
+            {label && <span className="text-xs hidden sm:inline">{label}</span>}
         </button>
     );
 
     const ToolbarGroup = ({ title, children, className = '' }: { title?: string; children: React.ReactNode; className?: string }) => (
-        <div className={`flex items-center gap-2 border-r border-border/60 pr-4 mr-2 ${className}`}>
-            {title && <span className="text-xs text-muted-foreground mr-1 font-semibold uppercase tracking-wide whitespace-nowrap">{title}</span>}
-            <div className="flex items-center gap-1.5">
+        <div className={`flex items-center gap-1 sm:gap-2 border-r border-border/60 pr-2 sm:pr-4 mr-1 sm:mr-2 flex-shrink-0 ${className}`}>
+            {title && <span className="text-xs text-muted-foreground mr-1 font-semibold uppercase tracking-wide whitespace-nowrap hidden sm:inline">{title}</span>}
+            <div className="flex items-center gap-1 sm:gap-1.5">
                 {children}
             </div>
         </div>
@@ -546,7 +546,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
     const editorClasses = isFullscreen
         ? 'fixed inset-0 z-50 bg-white'
-        : 'border border-[#E5E7EB] rounded-md overflow-hidden bg-white relative w-full max-w-full';
+        : 'border border-[#E5E7EB] rounded-md overflow-hidden bg-white relative w-full max-w-full min-w-0';
 
     return (
         <div className={editorClasses}>
@@ -554,84 +554,86 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                 <>
                     {/* Ribbon-Style Toolbar */}
                     <div className="bg-white border-b border-[#E5E7EB]">
-                        {/* Tab Navigation */}
-                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto">
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setActiveTab('home');
-                                }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
-                                    activeTab === 'home'
-                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                                }`}
-                            >
-                                Home
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setActiveTab('insert');
-                                }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
-                                    activeTab === 'insert'
-                                        ? 'text-primary border-b-2 border-primary bg-primary/5'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                                }`}
-                            >
-                                Insert
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setActiveTab('design');
-                                }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
-                                    activeTab === 'design'
-                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
-                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
-                                }`}
-                            >
-                                Design
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setActiveTab('layout');
-                                }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
-                                    activeTab === 'layout'
-                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
-                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
-                                }`}
-                            >
-                                Layout
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setActiveTab('review');
-                                }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
-                                    activeTab === 'review'
-                                        ? 'text-[#111827] border-b-2 border-[#3B82F6]'
-                                        : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
-                                }`}
-                            >
-                                Review
-                            </button>
-                            <div className="ml-auto flex items-center gap-2 px-4">
+                        {/* Tab Navigation - Mobile Responsive */}
+                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto mobile-scrollbar-hidden">
+                            <div className="flex items-center min-w-max">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setActiveTab('home');
+                                    }}
+                                    className={`px-3 sm:px-6 py-2.5 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap ${
+                                        activeTab === 'home'
+                                            ? 'text-primary border-b-2 border-primary bg-primary/5'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                    }`}
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setActiveTab('insert');
+                                    }}
+                                    className={`px-3 sm:px-6 py-2.5 text-xs sm:text-sm font-medium transition-colors relative whitespace-nowrap ${
+                                        activeTab === 'insert'
+                                            ? 'text-primary border-b-2 border-primary bg-primary/5'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                                    }`}
+                                >
+                                    Insert
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setActiveTab('design');
+                                    }}
+                                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors duration-150 ease-out relative whitespace-nowrap ${
+                                        activeTab === 'design'
+                                            ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                            : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
+                                    }`}
+                                >
+                                    Design
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setActiveTab('layout');
+                                    }}
+                                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors duration-150 ease-out relative whitespace-nowrap ${
+                                        activeTab === 'layout'
+                                            ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                            : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
+                                    }`}
+                                >
+                                    Layout
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setActiveTab('review');
+                                    }}
+                                    className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors duration-150 ease-out relative whitespace-nowrap ${
+                                        activeTab === 'review'
+                                            ? 'text-[#111827] border-b-2 border-[#3B82F6]'
+                                            : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
+                                    }`}
+                                >
+                                    Review
+                                </button>
+                            </div>
+                            <div className="ml-auto flex items-center gap-1 sm:gap-2 px-2 sm:px-4 flex-shrink-0">
                                 {/* Auto-save Status Indicator */}
                                 <div className="flex items-center gap-2 text-xs text-[#6B7280]">
                                     {saveStatus === 'saving' && (
@@ -684,9 +686,9 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                         </div>
 
                         {/* Tab Content - Mobile Responsive */}
-                        <div className="p-2 sm:p-4 bg-white min-h-[64px] overflow-x-auto border-b border-[#E5E7EB]">
+                        <div className="p-2 sm:p-4 bg-white min-h-[64px] overflow-x-auto border-b border-[#E5E7EB] mobile-scrollbar-hidden">
                             {activeTab === 'home' && (
-                                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-wrap min-w-max">
                                     {/* Clipboard Group */}
                                     <ToolbarGroup title="Clipboard">
                                         <ToolbarButton
@@ -1360,12 +1362,12 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                 {showRuler && <Ruler />}
                                 <FloatingToolbar editor={editor} />
                                 <div 
-                                    className="transition-transform duration-300 overflow-auto w-full"
+                                    className="transition-transform duration-300 overflow-auto w-full min-w-0"
                                     style={{ 
                                         transform: zoom !== 100 ? `scale(${zoom / 100})` : 'none', 
                                         transformOrigin: 'top left',
                                         minHeight: zoom !== 100 ? `${100 / (zoom / 100)}%` : 'auto',
-                                        maxHeight: 'calc(100vh - 300px)',
+                                        maxHeight: 'calc(100vh - 200px)',
                                         width: zoom !== 100 ? `${100 / (zoom / 100)}%` : '100%'
                                     }}
                                 >

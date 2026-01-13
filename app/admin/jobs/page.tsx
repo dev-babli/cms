@@ -18,24 +18,37 @@ export default function JobsListPage() {
 
   const checkAuth = async () => {
     try {
-      const res = await fetch("/api/auth/check");
+      const res = await fetch("/api/auth/me", { credentials: 'include' });
       if (res.ok) {
-        setAuthenticated(true);
-        fetchJobs();
+        const data = await res.json();
+        if (data.success && data.data?.user) {
+          setAuthenticated(true);
+          fetchJobs();
+        } else {
+          router.push("/auth/login");
+        }
       } else {
         router.push("/auth/login");
       }
     } catch (error) {
+      console.error("Auth check failed:", error);
       router.push("/auth/login");
     }
   };
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch("/api/cms/jobs");
-      const data = await res.json();
-      if (data.success) {
-        setJobs(data.data);
+      const res = await fetch("/api/cms/jobs", { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setJobs(data.data || []);
+        } else {
+          console.error("Failed to fetch jobs:", data.error);
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Failed to fetch jobs:", errorData.error || `Status: ${res.status}`);
       }
     } catch (error) {
       console.error("Failed to fetch jobs:", error);
@@ -44,15 +57,50 @@ export default function JobsListPage() {
     }
   };
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this job posting?")) return;
+    if (!confirm("Are you sure you want to delete this job posting? This action cannot be undone.")) return;
+
+    setDeletingId(id);
     try {
-      const res = await fetch(`/api/cms/jobs/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchJobs();
+      const res = await fetch(`/api/cms/jobs/${id}`, {
+        method: "DELETE",
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        alert(`Server error: ${res.status} ${res.statusText}`);
+        return;
+      }
+
+      console.log("Delete job response:", { status: res.status, ok: res.ok, data });
+
+      if (res.ok && data.success) {
+        alert("Job posting deleted successfully");
+        // Wait a moment before refreshing
+        setTimeout(() => {
+          fetchJobs();
+        }, 500);
+      } else {
+        const errorMessage = data.error || data.message || `Failed to delete job posting (${res.status})`;
+        alert(errorMessage);
+        console.error("Failed to delete job posting:", { status: res.status, statusText: res.statusText, data });
       }
     } catch (error) {
-      console.error("Failed to delete job:", error);
+      const errorMessage = error instanceof Error ? error.message : "Network error. Please check your connection.";
+      alert(errorMessage);
+      console.error("Failed to delete job posting:", error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -220,11 +268,20 @@ export default function JobsListPage() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDelete(job.id!)}
-                      className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                      disabled={deletingId === job.id}
+                      className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={deletingId === job.id ? "Deleting..." : "Delete"}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      {deletingId === job.id ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
                     </Button>
                   </div>
                 </div>

@@ -57,3 +57,7 @@ SELECT 'blog_posts table created successfully!' as status;
 
 
 
+
+
+
+

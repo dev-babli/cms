@@ -1,205 +1,152 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import AuthLayout from "@/components/auth/AuthLayout";
-import FormField from "@/components/auth/FormField";
-import ErrorMessage from "@/components/auth/ErrorMessage";
-import { useToast } from "@/components/ui/toast";
+import { Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
-    const router = useRouter();
-    const { showToast } = useToast();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-        rememberMe: false,
-    });
+export default function VisionUILoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-        try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password,
-                }),
-            });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
 
-            // Check if response is ok
-            if (!res.ok) {
-                let errorMessage = "Login failed";
-                try {
-                    const errorData = await res.json();
-                    errorMessage = errorData.error || errorData.message || `Server error (${res.status})`;
-                } catch {
-                    errorMessage = `Server error (${res.status}). Please check your connection and try again.`;
-                }
-                setError(errorMessage);
-                setLoading(false);
-                return;
-            }
+      const data = await res.json();
 
-            const data = await res.json();
+      if (res.ok && data.success) {
+        router.push("/admin");
+        router.refresh();
+      } else {
+        setError(data.error || "Invalid email or password");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (data.success) {
-                // Show success message
-                try {
-                    showToast("Login successful! Redirecting...", "success", 2000);
-                } catch (toastError) {
-                    console.log("Toast error (non-critical):", toastError);
-                }
-                
-                // Use window.location for more reliable redirect (works even if router fails)
-                // Small delay to ensure cookie is set
-                setTimeout(() => {
-                    const userRole = data.data?.user?.role || 'author';
-                    const redirectPath = userRole === 'admin' ? '/admin' : '/admin/blog';
-                    
-                    // Try router first, fallback to window.location
-                    try {
-                        router.push(redirectPath);
-                        // Also use window.location as backup
-                        setTimeout(() => {
-                            if (window.location.pathname === '/auth/login') {
-                                window.location.href = redirectPath;
-                            }
-                        }, 1000);
-                    } catch (routerError) {
-                        console.error("Router error, using window.location:", routerError);
-                        window.location.href = redirectPath;
-                    }
-                }, 300);
-            } else {
-                setError(data.error || "Login failed");
-                setLoading(false);
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error 
-                ? error.message 
-                : "Network error. Please check your connection and try again.";
-            setError(errorMessage);
-            console.error("Login error:", error);
-            setLoading(false);
-        }
-    };
-
-    const lockIcon = (
-        <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-    );
-
-    const emailIcon = (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-        </svg>
-    );
-
-    const passwordIcon = (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-    );
-
-    return (
-        <AuthLayout
-            title="Welcome back"
-            subtitle="Sign in to your CMS account"
-            icon={lockIcon}
-            footerText="Don't have an account?"
-            footerLink="/auth/register"
-            footerLinkText="Sign up"
-            gradientFrom="from-blue-50"
-            gradientTo="to-indigo-100"
-            iconBg="bg-blue-600"
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Background Image */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80')",
+          }}
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <ErrorMessage message={error} />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#3B82F6]/80 to-[#A855F7]/80" />
+        </div>
+        <div className="relative z-10 flex items-end p-12 text-white">
+          <div>
+            <p className="text-sm font-medium mb-2 opacity-90">INSPIRED BY THE FUTURE:</p>
+            <h1 className="text-4xl font-bold">THE VISION UI DASHBOARD</h1>
+          </div>
+        </div>
+      </div>
 
-                <FormField
-                    id="email"
-                    type="email"
-                    label="Email address"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="admin@emscale.com"
-                    required
-                    disabled={loading}
-                    icon={emailIcon}
-                    hint="Enter your registered email address"
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex items-center justify-center bg-[#0F172A] p-6">
+        <div className="w-full max-w-md">
+          <h2 className="text-3xl font-bold text-white mb-2">Nice to see you!</h2>
+          <p className="text-[#94A3B8] mb-8">Enter your email and password to sign in</p>
+
+          {error && (
+            <div className="mb-6 p-4 bg-[#EF4444]/20 border border-[#EF4444] rounded-lg text-[#EF4444] text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-[#CBD5E1] mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email address"
+                required
+                className="w-full px-4 py-3 bg-[#1E293B] border border-[#334155] rounded-lg text-white placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-[#CBD5E1] mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  required
+                  className="w-full px-4 py-3 bg-[#1E293B] border border-[#334155] rounded-lg text-white placeholder-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent pr-12"
                 />
-
-                <FormField
-                    id="password"
-                    type="password"
-                    label="Password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter your password"
-                    required
-                    disabled={loading}
-                    icon={passwordIcon}
-                />
-
-                <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={formData.rememberMe}
-                            onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            disabled={loading}
-                        />
-                        <span className="text-sm text-gray-600">Remember me</span>
-                    </label>
-                    <Link
-                        href="/auth/forgot-password"
-                        className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
-                    >
-                        Forgot password?
-                    </Link>
-                </div>
-
-                <Button
-                    type="submit"
-                    className="w-full h-12 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
-                    disabled={loading}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-white"
                 >
-                    {loading ? (
-                        <span className="flex items-center gap-2">
-                            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Signing in...
-                        </span>
-                    ) : (
-                        "Sign in"
-                    )}
-                </Button>
-            </form>
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
 
-            {process.env.NODE_ENV === 'development' && (
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-2">Default admin credentials:</p>
-                        <p className="text-xs text-gray-600 font-mono bg-gray-50 rounded p-2">
-                            Email: admin@emscale.com<br />
-                            Password: admin123
-                        </p>
-                    </div>
-                </div>
-            )}
-        </AuthLayout>
-    );
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#334155] bg-[#1E293B] text-[#3B82F6] focus:ring-[#3B82F6]"
+                />
+                <span className="text-sm text-[#CBD5E1]">Remember me</span>
+              </label>
+              <Link href="/auth/forgot-password" className="text-sm text-[#3B82F6] hover:text-[#2563EB]">
+                Forgot password?
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Signing in..." : "SIGN IN"}
+            </button>
+
+            <p className="text-center text-sm text-[#94A3B8]">
+              Don't have an account?{" "}
+              <Link href="/auth/register" className="text-[#3B82F6] hover:text-[#2563EB] font-medium">
+                Sign up
+              </Link>
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }

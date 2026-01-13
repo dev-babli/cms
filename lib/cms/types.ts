@@ -290,3 +290,65 @@ export const NewsSchema = z.object({
 
 export type News = z.infer<typeof NewsSchema>;
 
+// Hero Slide Schema
+export const HeroSlideSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1).max(200),
+  subtitle: z.string().max(500).optional(),
+  cta_text: z.string().max(100).optional(),
+  cta_link: z.string().url().optional().or(z.literal('')),
+  background_image: z.string().min(1),
+  accent_color: z.string().default('#667eea'),
+  has_light_background: z.boolean().default(false),
+  display_order: z.number().default(0),
+  is_active: z.boolean().default(true),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.number().optional(),
+  updated_by: z.number().optional(),
+});
+
+export type HeroSlide = z.infer<typeof HeroSlideSchema>;
+
+// Hero Slides Config Schema
+export const HeroSlidesConfigSchema = z.object({
+  id: z.number().optional(),
+  max_slides_displayed: z.number().min(1).max(20).default(5),
+  auto_advance_enabled: z.boolean().default(true),
+  auto_advance_interval: z.number().min(1000).max(60000).default(8000),
+  updated_at: z.string().optional(),
+  updated_by: z.number().optional(),
+});
+
+export type HeroSlidesConfig = z.infer<typeof HeroSlidesConfigSchema>;
+
+// Office Address Schema
+export const OfficeAddressSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1),
+  city: z.string().min(1),
+  country: z.string().min(1),
+  address_line1: z.string().min(1),
+  address_line2: z.string().optional(),
+  postal_code: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  coordinates_lat: z.number().min(-90).max(90).optional(),
+  coordinates_lng: z.number().min(-180).max(180).optional(),
+  display_order: z.number().default(0),
+  is_active: z.boolean().default(true),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  created_by: z.number().optional(),
+  updated_by: z.number().optional(),
+});
+
+export type OfficeAddress = z.infer<typeof OfficeAddressSchema>;
+
+// Update Page Schema to include visibility
+export const PageSchemaWithVisibility = PageSchema.extend({
+  is_visible: z.boolean().default(true),
+  visibility_changed_at: z.string().optional(),
+  visibility_changed_by: z.number().optional(),
+});
+

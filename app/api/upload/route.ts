@@ -255,23 +255,42 @@ export async function POST(request: NextRequest) {
     // Save to database (using PostgreSQL syntax)
     let dbResult;
     try {
-      dbResult = await execute(
-        `INSERT INTO media (filename, original_name, url, mime_type, size, alt_text)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id`,
-        [
-          finalFilename,
-          file.name,
-          publicUrl, // Use Supabase Storage public URL
-          mimeType,
-          finalBuffer.length,
-          ''
-        ]
+      // Check if media table exists first
+      const tableCheck = await execute(
+        `SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'media'
+        )`
       );
+      
+      const tableExists = tableCheck.rows?.[0]?.exists || false;
+      
+      if (tableExists) {
+        dbResult = await execute(
+          `INSERT INTO media (filename, original_name, url, mime_type, size, alt_text)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING id`,
+          [
+            finalFilename,
+            file.name,
+            publicUrl, // Use Supabase Storage public URL
+            mimeType,
+            finalBuffer.length,
+            ''
+          ]
+        );
+      } else {
+        console.warn('Media table does not exist. File uploaded to storage but not saved to database.');
+        console.warn('Run: CREATE TABLE media (id SERIAL PRIMARY KEY, filename TEXT, original_name TEXT, url TEXT, mime_type TEXT, size INTEGER, alt_text TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);');
+      }
     } catch (dbError: any) {
       // If media table doesn't exist or insert fails, log but continue
       // The file is already uploaded to Supabase Storage, so return success
       console.warn('Failed to save media record to database:', dbError.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('This is not critical - file is uploaded to storage. To fix, ensure media table exists.');
+      }
       // Continue without throwing - file upload was successful
     }
 

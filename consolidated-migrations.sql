@@ -501,13 +501,18 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created
 -- ============================================
 
 -- Create function to update updated_at timestamp
+-- SECURITY: Fixed search_path to prevent search_path injection attacks
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = CURRENT_TIMESTAMP;
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 -- Drop existing triggers if they exist, then create them
 DROP TRIGGER IF EXISTS update_pages_updated_at ON pages;

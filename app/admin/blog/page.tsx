@@ -105,30 +105,52 @@ export default function BlogList() {
         }
     };
 
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) return;
 
+        setDeletingId(id);
         try {
             const res = await fetch(`/api/cms/blog/${id}`, { 
                 method: "DELETE",
                 credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             });
             
-            const data = await res.json();
+            let data;
+            try {
+                data = await res.json();
+            } catch (parseError) {
+                // If response is not JSON, get text
+                const text = await res.text();
+                console.error("Non-JSON response:", text);
+                showToast(`Server error: ${res.status} ${res.statusText}`, "error");
+                return;
+            }
+            
+            console.log("Delete response:", { status: res.status, ok: res.ok, data });
             
             if (res.ok && data.success) {
                 showToast("Post deleted successfully", "success");
-                fetchPosts(); // Refresh the list
+                // Wait a moment before refreshing to ensure deletion is complete
+                setTimeout(() => {
+                    fetchPosts(); // Refresh the list
+                }, 500);
             } else {
                 // Show error message from API
                 const errorMessage = data.error || data.message || `Failed to delete post (${res.status})`;
                 showToast(errorMessage, "error");
-                console.error("Failed to delete post:", data);
+                console.error("Failed to delete post:", { status: res.status, statusText: res.statusText, data });
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Network error. Please check your connection.";
             showToast(errorMessage, "error");
             console.error("Failed to delete post:", error);
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -315,12 +337,20 @@ export default function BlogList() {
                                         )}
                                         <button
                                             onClick={() => handleDelete(post.id!)}
-                                            className="p-1.5 text-[#6B7280] hover:text-[#EF4444] hover:bg-[#FEE2E2] rounded transition-colors duration-150 ease-out"
-                                            title="Delete"
+                                            disabled={deletingId === post.id}
+                                            className="p-1.5 text-[#6B7280] hover:text-[#EF4444] hover:bg-[#FEE2E2] rounded transition-colors duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={deletingId === post.id ? "Deleting..." : "Delete"}
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
+                                            {deletingId === post.id ? (
+                                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            )}
                                         </button>
                                     </div>
                                 </div>

@@ -114,13 +114,18 @@ export default function RegisterPage() {
             // Check if response is ok
             if (!res.ok) {
                 let errorMessage = "Registration failed";
+                let errorGuidance = "";
                 try {
                     const errorData = await res.json();
                     errorMessage = errorData.error || errorData.message || `Server error (${res.status})`;
+                    // If it's a leaked password error, show guidance
+                    if (errorData.errorType === 'leaked_password' && errorData.guidance) {
+                        errorGuidance = errorData.guidance;
+                    }
                 } catch {
                     errorMessage = `Server error (${res.status}). Please check your connection and try again.`;
                 }
-                setError(errorMessage);
+                setError(errorGuidance ? `${errorMessage}\n\n${errorGuidance}` : errorMessage);
                 setLoading(false);
                 return;
             }
@@ -145,7 +150,12 @@ export default function RegisterPage() {
                     router.push("/admin/blog");
                 }
             } else {
-                setError(data.error || "Registration failed");
+                // If it's a leaked password error, show guidance
+                if (data.errorType === 'leaked_password' && data.guidance) {
+                    setError(`${data.error || "Registration failed"}\n\n${data.guidance}`);
+                } else {
+                    setError(data.error || "Registration failed");
+                }
             }
         } catch (error) {
             const errorMessage = error instanceof Error 

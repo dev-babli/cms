@@ -129,8 +129,19 @@ export async function DELETE(
       return createErrorResponse(ownershipError.message || 'Permission denied', request, 403);
     }
     
-    await ebooks.delete(ebookId);
-    return createSecureResponse({ success: true }, request);
+    const result = await ebooks.delete(ebookId);
+    console.log('✅ [Delete eBook] Delete result:', result);
+    
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete eBook] No rows deleted.');
+      return createErrorResponse('eBook not found or already deleted', request, 404);
+    }
+    
+    return createSecureResponse({ 
+      success: true, 
+      message: 'eBook deleted successfully',
+      data: { id: ebookId, deleted: true } 
+    }, request);
   } catch (error: any) {
     return createErrorResponse(error, request, 500);
   }

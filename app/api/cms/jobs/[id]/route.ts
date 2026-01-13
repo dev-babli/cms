@@ -82,8 +82,33 @@ export async function DELETE(
     
     const { id } = await params;
     const jobId = parseInt(id);
+    
+    if (isNaN(jobId) || jobId <= 0) {
+      return createErrorResponse('Invalid job ID', request, 400);
+    }
+    
+    // Verify job exists
+    const allJobs = await jobPostings.getAll(false);
+    const existingJob = allJobs.find((j: any) => j.id === jobId);
+    
+    if (!existingJob) {
+      return createErrorResponse('Job posting not found', request, 404);
+    }
+    
     const result = await jobPostings.delete(jobId);
-    return createSecureResponse({ success: true, data: result }, request);
+    console.log('✅ [Delete Job] Delete result:', result);
+    console.log('✅ [Delete Job] Changes:', result?.changes || 0);
+    
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete Job] No rows deleted.');
+      return createErrorResponse('Job posting not found or already deleted', request, 404);
+    }
+    
+    return createSecureResponse({ 
+      success: true, 
+      message: 'Job posting deleted successfully',
+      data: { id: jobId, deleted: true } 
+    }, request);
   } catch (error: any) {
     return createErrorResponse(error, request, 500);
   }

@@ -10,13 +10,33 @@ function BlogPreviewContent() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Try to get data from sessionStorage first (new method - avoids URL length limits)
+        const latestKey = sessionStorage.getItem('blog_preview_latest');
+        if (latestKey) {
+            try {
+                const storedData = sessionStorage.getItem(latestKey);
+                if (storedData) {
+                    const decoded = JSON.parse(storedData);
+                    setPreviewData(decoded);
+                    // Clean up old preview data (keep only the latest)
+                    sessionStorage.removeItem(latestKey);
+                    sessionStorage.removeItem('blog_preview_latest');
+                    setLoading(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to parse preview data from sessionStorage:', error);
+            }
+        }
+        
+        // Fallback to URL parameter (for backward compatibility)
         const dataParam = searchParams.get('data');
         if (dataParam) {
             try {
                 const decoded = JSON.parse(decodeURIComponent(dataParam));
                 setPreviewData(decoded);
             } catch (error) {
-                console.error('Failed to parse preview data:', error);
+                console.error('Failed to parse preview data from URL:', error);
             }
         }
         setLoading(false);
@@ -134,7 +154,6 @@ function BlogPreviewContent() {
                             [&_sup]:text-xs [&_sup]:align-super
                             [&_span[style*='color']]:[color:inherit]
                             [&_span[style*='background-color']]:[background-color:inherit]
-                            [&_span[style*='font-size']]:[font-size:inherit]
                             [&_p[style*='text-align']]:[text-align:inherit]
                             [&_h1[style*='text-align']]:[text-align:inherit]
                             [&_h2[style*='text-align']]:[text-align:inherit]

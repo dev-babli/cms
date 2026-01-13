@@ -33,6 +33,8 @@ export async function securityCheck(
     scanBody?: boolean;
     rateLimitType?: 'api' | 'lead' | 'auth';
     customRateLimiter?: any;
+    skipUrlScan?: boolean; // Skip URL scanning for authenticated admin requests
+    skipBlacklist?: boolean; // Skip blacklist check for authenticated admin users
   } = {}
 ): Promise<SecurityCheckResult> {
   const ip = getClientIdentifier(request);
@@ -43,16 +45,18 @@ export async function securityCheck(
     return { allowed: true };
   }
   
-  // 2. Check IP blacklist
-  const blacklisted = await isBlacklisted(ip);
-  if (blacklisted) {
-    await recordViolation(ip, 'blacklisted_ip_attempt');
-    return {
-      allowed: false,
-      statusCode: 403,
-      message: 'Access denied',
-      reason: 'IP address is blacklisted',
-    };
+  // 2. Check IP blacklist (skip for authenticated admin users)
+  if (!options.skipBlacklist) {
+    const blacklisted = await isBlacklisted(ip);
+    if (blacklisted) {
+      await recordViolation(ip, 'blacklisted_ip_attempt');
+      return {
+        allowed: false,
+        statusCode: 403,
+        message: 'Access denied',
+        reason: 'IP address is blacklisted',
+      };
+    }
   }
   
   // 3. DDoS Protection
@@ -93,9 +97,10 @@ export async function securityCheck(
     }
   }
   
-  // 5. Security Scanning (skip for lead submissions to avoid false positives)
+  // 5. Security Scanning (skip for lead submissions and when explicitly requested)
   // Lead submissions come from form data that might contain legitimate special characters
-  if (options.rateLimitType !== 'lead') {
+  // Skip URL scanning for authenticated admin requests to avoid false positives
+  if (options.rateLimitType !== 'lead' && !options.skipUrlScan) {
     const securityScan = scanRequest(request);
     if (!securityScan.isSafe) {
       // Log the threat

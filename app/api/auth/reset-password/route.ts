@@ -49,6 +49,20 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error('Password update error:', updateError);
+          // Check for leaked password error (HaveIBeenPwned)
+          const errorLower = updateError.message.toLowerCase();
+          if (errorLower.includes('breach') || errorLower.includes('leaked') || errorLower.includes('pwned') || 
+              errorLower.includes('compromised') || errorLower.includes('data breach')) {
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: 'This password was found in previous data breaches. Please choose a different, stronger password.',
+                errorType: 'leaked_password',
+                guidance: 'Use at least 12 characters with a mix of uppercase, lowercase, numbers, and special characters. Consider using a passphrase or password manager.'
+              },
+              { status: 400 }
+            );
+          }
           return NextResponse.json(
             { success: false, error: 'Failed to reset password. Please try again.' },
             { status: 400 }
@@ -70,6 +84,20 @@ export async function POST(request: NextRequest) {
 
         if (updateError) {
           console.error('Password update error:', updateError);
+          // Check for leaked password error (HaveIBeenPwned)
+          const errorLower = updateError.message.toLowerCase();
+          if (errorLower.includes('breach') || errorLower.includes('leaked') || errorLower.includes('pwned') || 
+              errorLower.includes('compromised') || errorLower.includes('data breach')) {
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: 'This password was found in previous data breaches. Please choose a different, stronger password.',
+                errorType: 'leaked_password',
+                guidance: 'Use at least 12 characters with a mix of uppercase, lowercase, numbers, and special characters. Consider using a passphrase or password manager.'
+              },
+              { status: 400 }
+            );
+          }
           return NextResponse.json(
             { success: false, error: 'Failed to reset password. Please try again.' },
             { status: 400 }

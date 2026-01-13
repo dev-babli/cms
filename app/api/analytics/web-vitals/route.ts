@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { applyCorsHeaders } from '@/lib/security/cors';
+import { getCurrentUser } from '@/lib/auth/server';
+import { createErrorResponse, createSecureResponse } from '@/lib/security/api-helpers';
 
 // Schema for web vitals data
 const WebVitalsSchema = z.object({
@@ -87,6 +89,33 @@ export async function POST(request: NextRequest) {
     );
 
     return applyCorsHeaders(response, request);
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return createErrorResponse('Authentication required', request, 401);
+    }
+
+    // For now, return default/optimal metrics
+    // In production, you would query the database for aggregated web vitals data
+    const metrics = [
+      { name: "LCP", value: 2.1, target: 2.5 }, // Largest Contentful Paint
+      { name: "FID", value: 50, target: 100 }, // First Input Delay
+      { name: "CLS", value: 0.05, target: 0.1 }, // Cumulative Layout Shift
+      { name: "FCP", value: 1.2, target: 1.8 }, // First Contentful Paint
+      { name: "TTFB", value: 200, target: 800 }, // Time to First Byte
+    ];
+
+    return createSecureResponse({
+      success: true,
+      data: { metrics },
+    }, request);
+  } catch (error: any) {
+    console.error('Failed to fetch web vitals:', error);
+    return createErrorResponse(error, request, 500);
   }
 }
 

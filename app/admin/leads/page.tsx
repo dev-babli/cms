@@ -12,6 +12,8 @@ export default function LeadsList() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
+    const [userRole, setUserRole] = useState<string>("");
+    const [error, setError] = useState<string>("");
     const [filters, setFilters] = useState({
         status: "",
         contentType: "",
@@ -25,26 +27,35 @@ export default function LeadsList() {
     // Real-time polling for new leads
     useEffect(() => {
         if (!authenticated) return;
-        
+
         // Poll every 10 seconds for new leads
         const interval = setInterval(() => {
             fetchLeads();
         }, 10000);
-        
+
         return () => clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authenticated]);
 
     const checkAuth = async () => {
         try {
-            const res = await fetch("/api/auth/check");
+            const res = await fetch("/api/auth/check", {
+                credentials: 'include',
+            });
             if (res.ok) {
-                setAuthenticated(true);
-                fetchLeads();
+                const data = await res.json();
+                if (data.success && data.user) {
+                    setUserRole(data.user.role || "");
+                    setAuthenticated(true);
+                    fetchLeads();
+                } else {
+                    router.push("/auth/login");
+                }
             } else {
                 router.push("/auth/login");
             }
         } catch (error) {
+            console.error("Auth check failed:", error);
             router.push("/auth/login");
         }
     };
@@ -52,17 +63,33 @@ export default function LeadsList() {
     const fetchLeads = async () => {
         try {
             const res = await fetch("/api/cms/leads", {
+                credentials: 'include', // ✅ Required for authentication
                 cache: 'no-store',
                 headers: {
                     'Cache-Control': 'no-cache',
+                    'Content-Type': 'application/json',
                 },
             });
+
             const data = await res.json();
+
             if (data.success) {
-                setLeads(data.data);
+                const leadsData = Array.isArray(data.data) ? data.data : [];
+                setLeads(leadsData);
+                setError(""); // Clear any previous errors
+                console.log(`✅ Fetched ${leadsData.length} leads`);
+            } else {
+                const errorMsg = data.error || "Failed to fetch leads";
+                setError(errorMsg);
+                console.error("Failed to fetch leads:", errorMsg, data);
+                // If unauthorized, redirect to login
+                if (res.status === 401 || res.status === 403) {
+                    router.push("/auth/login");
+                }
             }
-        } catch (error) {
-            console.error("Failed to fetch leads:", error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch leads. Please check your connection.";
+            console.error("Failed to fetch leads:", errorMessage, error);
         } finally {
             setLoading(false);
         }
@@ -74,7 +101,10 @@ export default function LeadsList() {
             if (filters.status) params.append('status', filters.status);
             if (filters.contentType) params.append('content_type', filters.contentType);
 
-            const res = await fetch(`/api/admin/leads/export?${params.toString()}`);
+            const res = await fetch(`/api/admin/leads/export?${params.toString()}`, {
+                credentials: 'include',
+            });
+
             if (res.ok) {
                 const blob = await res.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -86,11 +116,13 @@ export default function LeadsList() {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } else {
-                alert('Failed to export leads');
+                const errorData = await res.json().catch(() => ({ error: 'Failed to export leads' }));
+                alert(errorData.error || 'Failed to export leads');
             }
-        } catch (error) {
-            console.error('Export error:', error);
-            alert('Export failed');
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Export failed. Please try again.";
+            console.error('Export error:', errorMessage, error);
+            alert(errorMessage);
         }
     };
 
@@ -98,14 +130,21 @@ export default function LeadsList() {
         try {
             const res = await fetch(`/api/cms/leads/${id}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status }),
             });
-            if (res.ok) {
-                fetchLeads();
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                fetchLeads(); // Refresh the list
+            } else {
+                console.error('Failed to update lead status:', data.error || 'Unknown error');
             }
-        } catch (error) {
-            console.error('Failed to update lead status:', error);
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Network error. Please try again.";
+            console.error('Failed to update lead status:', errorMessage, error);
         }
     };
 
@@ -161,8 +200,8 @@ export default function LeadsList() {
                 backLink="/admin"
                 backText="Dashboard"
             >
-                <Button 
-                    size="lg" 
+                <Button
+                    size="lg"
                     className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/30"
                     onClick={handleExport}
                 >
@@ -174,6 +213,18 @@ export default function LeadsList() {
             </PremiumAdminHeader>
 
             <div className="max-w-7xl mx-auto px-6 py-12">
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-sm font-medium text-red-800">{error}</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Filters */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -244,10 +295,10 @@ export default function LeadsList() {
                             {filteredLeads.map((lead: any) => {
                                 const isDownloadable = !!lead.content_type;
                                 const isContactForm = !lead.content_type;
-                                
+
                                 return (
-                                    <div 
-                                        key={lead.id} 
+                                    <div
+                                        key={lead.id}
                                         className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow overflow-hidden"
                                     >
                                         <div className="flex">
@@ -278,7 +329,12 @@ export default function LeadsList() {
                                                     <select
                                                         value={lead.status || 'new'}
                                                         onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                                                        className={`text-xs font-semibold px-3 py-1.5 rounded-full border-0 ${statusColors[lead.status] || statusColors.new} cursor-pointer`}
+                                                        disabled={userRole === 'author'}
+                                                        className={`text-xs font-semibold px-3 py-1.5 rounded-full border-0 ${statusColors[lead.status] || statusColors.new} ${userRole === 'author'
+                                                                ? 'cursor-not-allowed opacity-60'
+                                                                : 'cursor-pointer'
+                                                            }`}
+                                                        title={userRole === 'author' ? 'Authors can view but not edit leads' : 'Update lead status'}
                                                     >
                                                         <option value="new">New</option>
                                                         <option value="contacted">Contacted</option>
@@ -301,9 +357,9 @@ export default function LeadsList() {
                                                     <div>
                                                         <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Date</div>
                                                         <div className="text-sm text-slate-900">
-                                                            {new Date(lead.created_at).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
-                                                                day: 'numeric', 
+                                                            {new Date(lead.created_at).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
                                                                 year: 'numeric',
                                                                 hour: '2-digit',
                                                                 minute: '2-digit'
@@ -320,7 +376,7 @@ export default function LeadsList() {
                                                 )}
 
                                                 <div className="mt-4 flex items-center gap-2">
-                                                    <a 
+                                                    <a
                                                         href={`mailto:${lead.email}`}
                                                         className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                                                     >
@@ -397,7 +453,7 @@ export default function LeadsList() {
                         <div className="lg:col-span-1">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-6">
                                 <h3 className="text-lg font-semibold text-slate-900 mb-6">Lead Statistics</h3>
-                                
+
                                 <div className="space-y-4">
                                     <div>
                                         <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">By Source</div>

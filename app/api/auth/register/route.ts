@@ -81,6 +81,21 @@ export async function POST(request: NextRequest) {
         );
         return applyCorsHeaders(response, request, { allowCredentials: true });
       }
+      // Check for leaked password error (HaveIBeenPwned)
+      const errorLower = authError.message.toLowerCase();
+      if (errorLower.includes('breach') || errorLower.includes('leaked') || errorLower.includes('pwned') || 
+          errorLower.includes('compromised') || errorLower.includes('data breach')) {
+        const response = NextResponse.json(
+          { 
+            success: false, 
+            error: 'This password was found in previous data breaches. Please choose a different, stronger password.',
+            errorType: 'leaked_password',
+            guidance: 'Use at least 12 characters with a mix of uppercase, lowercase, numbers, and special characters. Consider using a passphrase or password manager.'
+          },
+          { status: 400 }
+        );
+        return applyCorsHeaders(response, request, { allowCredentials: true });
+      }
       // Provide more user-friendly error messages
       let errorMessage = authError.message;
       if (authError.message.includes('Invalid API key')) {

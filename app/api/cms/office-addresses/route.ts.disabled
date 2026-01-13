@@ -1,0 +1,13 @@
+// DISABLED - Feature hidden temporarily
+// Rename to route.ts to enable
+
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    { success: false, error: 'Feature temporarily disabled' },
+    { status: 503 }
+  );
+}
+
+

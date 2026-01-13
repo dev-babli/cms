@@ -150,8 +150,7 @@ export async function DELETE(
     const user = await getCurrentUser();
     if (!user) {
       console.error('❌ [Delete Blog] No user authenticated');
-      const errorResponse = createErrorResponse('Authentication required', request, 401);
-      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
+      return createErrorResponse('Authentication required', request, 401, { allowCredentials: true });
     }
     
     console.log('🔍 [Delete Blog] User:', { id: user.id, email: user.email, role: user.role });
@@ -159,16 +158,14 @@ export async function DELETE(
     // SECURITY: Only admins and editors can delete blog posts
     if (!['admin', 'editor'].includes(user.role)) {
       console.error('❌ [Delete Blog] Insufficient permissions:', user.role);
-      const errorResponse = createErrorResponse(`Only admins and editors can delete posts. Your role: ${user.role}`, request, 403);
-      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
+      return createErrorResponse(`Only admins and editors can delete posts. Your role: ${user.role}`, request, 403, { allowCredentials: true });
     }
     
     const { id: paramId } = await params;
     const id = parseInt(paramId);
     
     if (isNaN(id) || id <= 0) {
-      const errorResponse = createErrorResponse('Invalid post ID', request, 400);
-      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
+      return createErrorResponse('Invalid post ID', request, 400, { allowCredentials: true });
     }
     
     console.log('🗑️ [Delete Blog] Attempting to delete post ID:', id);
@@ -179,21 +176,32 @@ export async function DELETE(
     
     if (!existingPost) {
       console.error('❌ [Delete Blog] Post not found:', id);
-      const errorResponse = createErrorResponse('Post not found', request, 404);
-      return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
+      return createErrorResponse('Post not found', request, 404, { allowCredentials: true });
     }
     
     // Admins and editors can delete any post, no ownership check needed
     // Authors cannot delete posts (already checked above)
     
     const result = await blogPosts.delete(id);
+    console.log('✅ [Delete Blog] Delete result:', result);
+    console.log('✅ [Delete Blog] Changes:', result?.changes || 0);
+    
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete Blog] No rows deleted. Post may not exist or already deleted.');
+      return createErrorResponse('Post not found or already deleted', request, 404, { allowCredentials: true });
+    }
+    
     console.log('✅ [Delete Blog] Successfully deleted post ID:', id);
-    const response = createSecureResponse({ success: true, data: result }, request);
+    const response = createSecureResponse({ 
+      success: true, 
+      message: 'Post deleted successfully',
+      data: { id, deleted: true } 
+    }, request);
     return applyCorsHeaders(response, request, { allowCredentials: true });
   } catch (error: any) {
     console.error('❌ [Delete Blog] Error:', error);
-    const errorResponse = createErrorResponse(error, request, 500);
-    return applyCorsHeaders(errorResponse, request, { allowCredentials: true });
+    const errorMessage = error?.message || error?.toString() || 'An unexpected error occurred';
+    return createErrorResponse(errorMessage, request, 500, { allowCredentials: true });
   }
 }
 

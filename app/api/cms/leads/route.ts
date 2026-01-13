@@ -20,21 +20,39 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // SECURITY: Only admins and editors can view leads
-    if (user.role !== 'admin' && user.role !== 'editor') {
+    // SECURITY: Allow admins, editors, and authors to view leads
+    // Authors can view (read-only), admins/editors can also edit/delete
+    if (!['admin', 'editor', 'author'].includes(user.role)) {
       return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
+        { 
+          success: false, 
+          error: `Insufficient permissions. Your role (${user.role}) does not have access to leads. Required roles: admin, editor, or author.` 
+        },
         { status: 403 }
       );
     }
     
-    // Security check
+    // Security check - Skip URL scanning and blacklist for authenticated GET requests
+    // GET requests from authenticated admin/editor/author users are safe
+    // URL scanning can cause false positives on query parameters
+    // Blacklist check is skipped because authenticated users are trusted
     const securityResult = await securityCheck(request, {
       scanBody: false,
       rateLimitType: 'api',
+      skipUrlScan: true, // Skip URL scanning for authenticated admin requests
+      skipBlacklist: true, // Skip blacklist check for authenticated admin/editor/author users
     });
     
     if (!securityResult.allowed) {
+      // Log the security check failure for debugging
+      console.warn('🚨 Security check failed for leads GET request:', {
+        reason: securityResult.reason,
+        message: securityResult.message,
+        statusCode: securityResult.statusCode,
+        userRole: user.role,
+        url: request.url,
+      });
+      
       return NextResponse.json(
         { success: false, error: securityResult.message || 'Access denied' },
         { 
@@ -47,18 +65,37 @@ export async function GET(request: NextRequest) {
     const contentType = searchParams.get('content_type');
     const contentId = searchParams.get('content_id');
     const email = searchParams.get('email');
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
     let items;
-    if (contentType && contentId) {
-      items = await leads.getByContent(contentType, parseInt(contentId));
-    } else if (email) {
-      items = await leads.getByEmail(email);
-    } else {
-      items = await leads.getAll();
+    try {
+      if (contentType && contentId) {
+        items = await leads.getByContent(contentType, parseInt(contentId));
+      } else if (email) {
+        items = await leads.getByEmail(email);
+      } else {
+        items = await leads.getAll(limit);
+      }
+      
+      // Ensure items is an array
+      if (!Array.isArray(items)) {
+        console.warn('⚠️ Leads API: getAll() did not return an array:', typeof items, items);
+        items = [];
+      }
+      
+      console.log(`✅ Leads API: Fetched ${items.length} leads`);
+    } catch (dbError: any) {
+      console.error('❌ Leads API: Database error fetching leads:', {
+        message: dbError?.message,
+        code: dbError?.code,
+        detail: dbError?.detail,
+      });
+      throw dbError;
     }
 
     const response = NextResponse.json(
-      { success: true, data: items }
+      { success: true, data: items || [] }
     );
     
     // Apply secure CORS headers

@@ -1,25 +1,24 @@
 import db, { query, execute, queryAll } from '../db';
-import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Lead, Category } from './types';
+import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Lead, Category, HeroSlide, HeroSlidesConfig, OfficeAddress } from './types';
 
 // Blog Posts
 export const blogPosts = {
   getAll: async (published = false, limit?: number) => {
     try {
-      // Handle published field as boolean, string, or number
-      // PostgreSQL requires explicit casting for boolean comparisons
+      // Performance: Select only needed fields instead of *
+      // For dashboard/list views, we don't need full content
+      const fields = limit && limit <= 20 
+        ? 'id, title, slug, excerpt, featured_image, author, published, publish_date, created_at, updated_at'
+        : 'id, title, slug, excerpt, featured_image, author, published, publish_date, created_at';
+      
       const limitClause = limit ? `LIMIT ${limit}` : '';
       const sqlQuery = published 
-        ? `SELECT * FROM blog_posts 
+        ? `SELECT ${fields} FROM blog_posts 
            WHERE (published = true OR published::text = 'true' OR published::text = '1')
            ORDER BY publish_date DESC NULLS LAST, created_at DESC ${limitClause}`
-        : `SELECT * FROM blog_posts ORDER BY created_at DESC ${limitClause}`;
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📝 Executing query:', sqlQuery);
-      }
+        : `SELECT ${fields} FROM blog_posts ORDER BY created_at DESC ${limitClause}`;
+      
       const result = await query(sqlQuery);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📝 Query result:', result?.rows?.length || 0, 'posts');
-      }
       return result?.rows || [];
     } catch (error: any) {
       console.error('❌ Error in blogPosts.getAll:', error);
@@ -45,17 +44,18 @@ export const blogPosts = {
   },
   
   create: async (post: Omit<BlogPost, 'id'> | any) => {
-    const stmt = db.prepare(`
+    // Use PostgreSQL syntax directly for better reliability
+    const sql = `
       INSERT INTO blog_posts (
         slug, title, excerpt, content, author, featured_image, banner_image, category, tags, 
         published, publish_date, scheduled_publish_date,
         meta_title, meta_description, meta_keywords, canonical_url,
         og_title, og_description, og_image, og_type, schema_markup, created_by
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       RETURNING *
-    `);
-    return await stmt.run(
+    `;
+    return await execute(sql, [
       post.slug, 
       post.title, 
       post.excerpt || '', 
@@ -79,7 +79,7 @@ export const blogPosts = {
       post.og_type || 'article',
       post.schema_markup || null,
       post.created_by || null
-    );
+    ]);
   },
   
   update: async (id: number, post: Partial<BlogPost>) => {
@@ -96,7 +96,14 @@ export const blogPosts = {
   },
   
   delete: async (id: number) => {
-    return await execute('DELETE FROM blog_posts WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM blog_posts WHERE id = $1', [id]);
+      console.log('🗑️ [blogPosts.delete] Deleted post ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [blogPosts.delete] Error deleting post:', id, error);
+      throw error;
+    }
   },
 };
 
@@ -146,16 +153,26 @@ export const teamMembers = {
   },
   
   delete: async (id: number) => {
-    return await execute('DELETE FROM team_members WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM team_members WHERE id = $1', [id]);
+      console.log('🗑️ [teamMembers.delete] Deleted member ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [teamMembers.delete] Error deleting member:', id, error);
+      throw error;
+    }
   },
 };
 
 // Job Postings
 export const jobPostings = {
-  getAll: async (published = false) => {
+  getAll: async (published = false, limit?: number) => {
+    // Performance: Select only needed fields for list views
+    const fields = 'id, title, slug, location, employment_type, published, created_at';
+    const limitClause = limit ? `LIMIT ${limit}` : '';
     const sqlQuery = published
-      ? 'SELECT * FROM job_postings WHERE published = true ORDER BY created_at DESC'
-      : 'SELECT * FROM job_postings ORDER BY created_at DESC';
+      ? `SELECT ${fields} FROM job_postings WHERE published = true ORDER BY created_at DESC ${limitClause}`
+      : `SELECT ${fields} FROM job_postings ORDER BY created_at DESC ${limitClause}`;
     const result = await query(sqlQuery);
     return result?.rows || [];
   },
@@ -166,12 +183,11 @@ export const jobPostings = {
   },
 
   create: async (job: Omit<JobPosting, 'id'>) => {
-    const stmt = db.prepare(`
+    const result = await execute(`
       INSERT INTO job_postings (title, slug, location, employment_type, categories, description, requirements, skills, salary_range, apply_url, remote, published)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
-    `);
-    return await stmt.run(
+    `, [
       job.title,
       job.slug,
       job.location || '',
@@ -184,7 +200,8 @@ export const jobPostings = {
       job.apply_url || '',
       job.remote || false,
       job.published || false
-    );
+    ]);
+    return result.rows?.[0] || result.row || result;
   },
 
   update: async (id: number, job: Partial<JobPosting>) => {
@@ -198,16 +215,32 @@ export const jobPostings = {
   },
 
   delete: async (id: number) => {
-    return await execute('DELETE FROM job_postings WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM job_postings WHERE id = $1', [id]);
+      console.log('🗑️ [jobPostings.delete] Deleted job ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [jobPostings.delete] Error deleting job:', id, error);
+      throw error;
+    }
   },
 };
 
 // Pages
 export const pages = {
-  getAll: async (published = false) => {
-    const sqlQuery = published 
-      ? 'SELECT * FROM pages WHERE published = true'
-      : 'SELECT * FROM pages ORDER BY created_at DESC';
+  getAll: async (published = false, visibleOnly = false) => {
+    let sqlQuery = 'SELECT * FROM pages WHERE 1=1';
+    
+    if (published) {
+      sqlQuery += ' AND (published = true OR published::text = \'true\' OR published::text = \'1\')';
+    }
+    
+    if (visibleOnly) {
+      sqlQuery += ' AND (is_visible = true OR is_visible IS NULL)';
+    }
+    
+    sqlQuery += ' ORDER BY created_at DESC';
+    
     const result = await query(sqlQuery);
     return result?.rows || [];
   },
@@ -218,14 +251,14 @@ export const pages = {
   },
   
   create: async (page: Omit<Page, 'id'>) => {
-    const stmt = db.prepare(`
+    const result = await execute(`
       INSERT INTO pages (slug, title, content, meta_description, published)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `);
-    return await stmt.run(
+    `, [
       page.slug, page.title, page.content || '', page.meta_description || '', page.published || false
-    );
+    ]);
+    return result.rows?.[0] || result.row || result;
   },
   
   update: async (id: number, page: Partial<Page>) => {
@@ -237,20 +270,59 @@ export const pages = {
   },
   
   delete: async (id: number) => {
-    return await execute('DELETE FROM pages WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM pages WHERE id = $1', [id]);
+      console.log('🗑️ [pages.delete] Deleted page ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [pages.delete] Error deleting page:', id, error);
+      throw error;
+    }
+  },
+
+  updateVisibility: async (id: number, isVisible: boolean, userId?: number) => {
+    try {
+      // Check if this is a protected page
+      const page = await query('SELECT slug FROM pages WHERE id = $1', [id]);
+      if (!page?.rows?.[0]) {
+        throw new Error('Page not found');
+      }
+      
+      const slug = page.rows[0].slug?.toLowerCase() || '';
+      const protectedSlugs = ['home', '/', 'index', 'contact', 'contact-us', 'contactus'];
+      
+      if (protectedSlugs.includes(slug) && !isVisible) {
+        throw new Error('Cannot hide homepage or contact page');
+      }
+      
+      const result = await query(`
+        UPDATE pages 
+        SET is_visible = $1, visibility_changed_at = NOW(), visibility_changed_by = $2
+        WHERE id = $3
+        RETURNING *
+      `, [isVisible, userId || null, id]);
+      
+      return result?.rows?.[0] || null;
+    } catch (error: any) {
+      console.error('❌ Error updating page visibility:', error);
+      throw error;
+    }
   },
 };
 
 // eBooks
 export const ebooks = {
-  getAll: async (published = false) => {
-    // Handle published field as boolean, string, or number
-    // PostgreSQL requires explicit casting for boolean comparisons
+  getAll: async (published = false, limit?: number) => {
+    // Performance: Select only needed fields for list views
+    const fields = limit && limit <= 20
+      ? 'id, title, slug, excerpt, cover_image, author, published, publish_date, created_at'
+      : 'id, title, slug, excerpt, cover_image, published, publish_date, created_at';
+    const limitClause = limit ? `LIMIT ${limit}` : '';
     const sqlQuery = published
-      ? `SELECT * FROM ebooks 
+      ? `SELECT ${fields} FROM ebooks 
          WHERE (published = true OR published::text = 'true' OR published::text = '1')
-         ORDER BY publish_date DESC NULLS LAST, created_at DESC`
-      : 'SELECT * FROM ebooks ORDER BY created_at DESC';
+         ORDER BY publish_date DESC NULLS LAST, created_at DESC ${limitClause}`
+      : `SELECT ${fields} FROM ebooks ORDER BY created_at DESC ${limitClause}`;
     const result = await query(sqlQuery);
     return result?.rows || [];
   },
@@ -327,7 +399,14 @@ export const ebooks = {
   },
 
   delete: async (id: number) => {
-    return await execute('DELETE FROM ebooks WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM ebooks WHERE id = $1', [id]);
+      console.log('🗑️ [ebooks.delete] Deleted ebook ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [ebooks.delete] Error deleting ebook:', id, error);
+      throw error;
+    }
   },
 
   incrementDownload: async (id: number) => {
@@ -428,7 +507,14 @@ export const caseStudies = {
   },
 
   delete: async (id: number) => {
-    return await execute('DELETE FROM case_studies WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM case_studies WHERE id = $1', [id]);
+      console.log('🗑️ [caseStudies.delete] Deleted case study ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [caseStudies.delete] Error deleting case study:', id, error);
+      throw error;
+    }
   },
 
   incrementDownload: async (id: number) => {
@@ -439,10 +525,20 @@ export const caseStudies = {
 
 // Leads
 export const leads = {
-  getAll: async () => {
+  getAll: async (limit?: number) => {
     try {
-      const result = await query('SELECT * FROM leads ORDER BY created_at DESC');
-      return result.rows || [];
+      // Performance: Select only needed fields, add limit for pagination
+      // Combine first_name and last_name into a single name field for compatibility
+      const fields = 'id, first_name, last_name, TRIM(COALESCE(first_name, \'\') || \' \' || COALESCE(last_name, \'\')) as name, email, phone, company, content_type, content_id, created_at';
+      const limitClause = limit ? `LIMIT ${limit}` : '';
+      const result = await query(`SELECT ${fields} FROM leads ORDER BY created_at DESC ${limitClause}`);
+      // Ensure we return an array - handle both result.rows and result formats
+      const rows = result?.rows || result || [];
+      // Post-process to ensure name field is set properly
+      return Array.isArray(rows) ? rows.map((row: any) => ({
+        ...row,
+        name: row.name || row.first_name || row.last_name || row.email || 'Unknown'
+      })) : [];
     } catch (error: any) {
       console.error('❌ Error in leads.getAll:', error);
       throw error;
@@ -599,16 +695,16 @@ export const categories = {
   },
 
   create: async (category: Omit<Category, 'id'>) => {
-    const stmt = db.prepare(`
+    const result = await execute(`
       INSERT INTO categories (name, slug, description, content_type, color, icon, order_index, parent_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
-    `);
-    return await stmt.run(
+    `, [
       category.name, category.slug, category.description || '',
       category.content_type || 'blog', category.color || '', category.icon || '',
       category.order_index || 0, category.parent_id || null
-    );
+    ]);
+    return result.rows?.[0] || result.row || result;
   },
 
   update: async (id: number, category: Partial<Category>) => {
@@ -622,7 +718,14 @@ export const categories = {
   },
 
   delete: async (id: number) => {
-    return await execute('DELETE FROM categories WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM categories WHERE id = $1', [id]);
+      console.log('🗑️ [categories.delete] Deleted category ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [categories.delete] Error deleting category:', id, error);
+      throw error;
+    }
   },
 };
 
@@ -634,13 +737,12 @@ export const contentCategories = {
 
   setCategories: async (contentType: string, contentId: number, categoryIds: number[]) => {
     // Delete existing mappings
-    await db.prepare('DELETE FROM content_categories WHERE content_type = $1 AND content_id = $2').run(contentType, contentId);
+    await execute('DELETE FROM content_categories WHERE content_type = $1 AND content_id = $2', [contentType, contentId]);
     
     // Insert new mappings
     if (categoryIds.length > 0) {
-      const stmt = db.prepare('INSERT INTO content_categories (content_type, content_id, category_id) VALUES ($1, $2, $3)');
       for (const catId of categoryIds) {
-        await stmt.run(contentType, contentId, catId);
+        await execute('INSERT INTO content_categories (content_type, content_id, category_id) VALUES ($1, $2, $3)', [contentType, contentId, catId]);
       }
     }
     return { success: true };
@@ -921,7 +1023,338 @@ export const news = {
   },
 
   delete: async (id: number) => {
-    return await execute('DELETE FROM news_announcements WHERE id = $1', [id]);
+    try {
+      const result = await execute('DELETE FROM news_announcements WHERE id = $1', [id]);
+      console.log('🗑️ [news.delete] Deleted news ID:', id, 'Changes:', result?.changes);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [news.delete] Error deleting news:', id, error);
+      throw error;
+    }
   },
+};
+
+// Hero Slides
+export const heroSlides = {
+  getAll: async (activeOnly = true) => {
+    try {
+      const sqlQuery = activeOnly
+        ? `SELECT * FROM hero_slides WHERE is_active = true ORDER BY display_order ASC`
+        : `SELECT * FROM hero_slides ORDER BY display_order ASC`;
+      const result = await query(sqlQuery);
+      return result?.rows || [];
+    } catch (error: any) {
+      console.error('❌ Error in heroSlides.getAll:', error);
+      throw error;
+    }
+  },
+
+  getById: async (id: number) => {
+    try {
+      const result = await query('SELECT * FROM hero_slides WHERE id = $1', [id]);
+      return (result?.rows?.[0] || null) as HeroSlide | null;
+    } catch (error: any) {
+      console.error('❌ Error fetching hero slide by id:', error);
+      throw error;
+    }
+  },
+
+  create: async (slide: {
+    title: string;
+    subtitle?: string;
+    cta_text?: string;
+    cta_link?: string;
+    background_image: string;
+    accent_color?: string;
+    has_light_background?: boolean;
+    display_order: number;
+    is_active?: boolean;
+  }, userId?: number) => {
+    try {
+      const result = await query(`
+        INSERT INTO hero_slides (
+          title, subtitle, cta_text, cta_link, background_image,
+          accent_color, has_light_background, display_order, is_active, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `, [
+        slide.title,
+        slide.subtitle || null,
+        slide.cta_text || null,
+        slide.cta_link || null,
+        slide.background_image,
+        slide.accent_color || '#667eea',
+        slide.has_light_background || false,
+        slide.display_order,
+        slide.is_active !== undefined ? slide.is_active : true,
+        userId || null
+      ]);
+      return result?.rows?.[0] as HeroSlide;
+    } catch (error: any) {
+      console.error('❌ Error creating hero slide:', error);
+      throw error;
+    }
+  },
+
+  update: async (id: number, slide: Partial<{
+    title: string;
+    subtitle: string;
+    cta_text: string;
+    cta_link: string;
+    background_image: string;
+    accent_color: string;
+    has_light_background: boolean;
+    display_order: number;
+    is_active: boolean;
+  }>, userId?: number) => {
+    try {
+      const fields = Object.keys(slide).filter(k => k !== 'id');
+      if (fields.length === 0) return null;
+
+      const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+      const values = fields.map(field => slide[field as keyof typeof slide]);
+      const queryStr = `
+        UPDATE hero_slides 
+        SET ${setClause}, updated_at = NOW(), updated_by = $${fields.length + 1}
+        WHERE id = $${fields.length + 2}
+        RETURNING *
+      `;
+      const result = await query(queryStr, [...values, userId || null, id]);
+      return (result?.rows?.[0] || null) as HeroSlide | null;
+    } catch (error: any) {
+      console.error('❌ Error updating hero slide:', error);
+      throw error;
+    }
+  },
+
+  delete: async (id: number) => {
+    try {
+      // Soft delete - mark as inactive
+      const result = await query(
+        'UPDATE hero_slides SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *',
+        [id]
+      );
+      return result?.rows?.[0] as HeroSlide | null;
+    } catch (error: any) {
+      console.error('❌ Error deleting hero slide:', error);
+      throw error;
+    }
+  },
+
+  reorder: async (slides: { id: number; display_order: number }[]) => {
+    try {
+      // Update multiple slides' display_order
+      const updates = slides.map(slide => 
+        query('UPDATE hero_slides SET display_order = $1 WHERE id = $2', [slide.display_order, slide.id])
+      );
+      await Promise.all(updates);
+      return true;
+    } catch (error: any) {
+      console.error('❌ Error reordering hero slides:', error);
+      throw error;
+    }
+  }
+};
+
+// Hero Slides Config
+export const heroSlidesConfig = {
+  get: async () => {
+    try {
+      const result = await query('SELECT * FROM hero_slides_config ORDER BY id DESC LIMIT 1');
+      return (result?.rows?.[0] || {
+        max_slides_displayed: 5,
+        auto_advance_enabled: true,
+        auto_advance_interval: 8000
+      }) as HeroSlidesConfig;
+    } catch (error: any) {
+      console.error('❌ Error fetching hero slides config:', error);
+      // Return defaults if table doesn't exist yet
+      return {
+        max_slides_displayed: 5,
+        auto_advance_enabled: true,
+        auto_advance_interval: 8000
+      } as HeroSlidesConfig;
+    }
+  },
+
+  update: async (config: {
+    max_slides_displayed?: number;
+    auto_advance_enabled?: boolean;
+    auto_advance_interval?: number;
+  }, userId?: number) => {
+    try {
+      const result = await query(`
+        UPDATE hero_slides_config 
+        SET 
+          max_slides_displayed = COALESCE($1, max_slides_displayed),
+          auto_advance_enabled = COALESCE($2, auto_advance_enabled),
+          auto_advance_interval = COALESCE($3, auto_advance_interval),
+          updated_at = NOW(),
+          updated_by = $4
+        WHERE id = (SELECT id FROM hero_slides_config ORDER BY id DESC LIMIT 1)
+        RETURNING *
+      `, [
+        config.max_slides_displayed || null,
+        config.auto_advance_enabled !== undefined ? config.auto_advance_enabled : null,
+        config.auto_advance_interval || null,
+        userId || null
+      ]);
+      return (result?.rows?.[0] || null) as HeroSlidesConfig | null;
+    } catch (error: any) {
+      console.error('❌ Error updating hero slides config:', error);
+      throw error;
+    }
+  }
+};
+
+// Office Addresses
+export const officeAddresses = {
+  getAll: async (activeOnly = true) => {
+    try {
+      const sqlQuery = activeOnly
+        ? `SELECT * FROM office_addresses WHERE is_active = true ORDER BY country, display_order ASC`
+        : `SELECT * FROM office_addresses ORDER BY country, display_order ASC`;
+      const result = await query(sqlQuery);
+      return result?.rows || [];
+    } catch (error: any) {
+      console.error('❌ Error in officeAddresses.getAll:', error);
+      throw error;
+    }
+  },
+
+  getById: async (id: number) => {
+    try {
+      const result = await query('SELECT * FROM office_addresses WHERE id = $1', [id]);
+      return (result?.rows?.[0] || null) as OfficeAddress | null;
+    } catch (error: any) {
+      console.error('❌ Error fetching office address by id:', error);
+      throw error;
+    }
+  },
+
+  create: async (address: {
+    name: string;
+    city: string;
+    country: string;
+    address_line1: string;
+    address_line2?: string;
+    postal_code?: string;
+    phone?: string;
+    email?: string;
+    coordinates_lat?: number;
+    coordinates_lng?: number;
+    display_order: number;
+    is_active?: boolean;
+  }, userId?: number) => {
+    try {
+      // Validate coordinates
+      if (address.coordinates_lat && (address.coordinates_lat < -90 || address.coordinates_lat > 90)) {
+        throw new Error('Invalid latitude. Must be between -90 and 90');
+      }
+      if (address.coordinates_lng && (address.coordinates_lng < -180 || address.coordinates_lng > 180)) {
+        throw new Error('Invalid longitude. Must be between -180 and 180');
+      }
+      
+      // Validate email format
+      if (address.email && address.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email)) {
+        throw new Error('Invalid email format');
+      }
+      
+      const result = await query(`
+        INSERT INTO office_addresses (
+          name, city, country, address_line1, address_line2,
+          postal_code, phone, email, coordinates_lat, coordinates_lng,
+          display_order, is_active, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING *
+      `, [
+        address.name,
+        address.city,
+        address.country,
+        address.address_line1,
+        address.address_line2 || null,
+        address.postal_code || null,
+        address.phone || null,
+        address.email || null,
+        address.coordinates_lat || null,
+        address.coordinates_lng || null,
+        address.display_order,
+        address.is_active !== undefined ? address.is_active : true,
+        userId || null
+      ]);
+      return result?.rows?.[0] as OfficeAddress;
+    } catch (error: any) {
+      console.error('❌ Error creating office address:', error);
+      throw error;
+    }
+  },
+
+  update: async (id: number, address: Partial<{
+    name: string;
+    city: string;
+    country: string;
+    address_line1: string;
+    address_line2: string;
+    postal_code: string;
+    phone: string;
+    email: string;
+    coordinates_lat: number;
+    coordinates_lng: number;
+    display_order: number;
+    is_active: boolean;
+  }>, userId?: number) => {
+    try {
+      // Same validation as create
+      if (address.coordinates_lat !== undefined && (address.coordinates_lat < -90 || address.coordinates_lat > 90)) {
+        throw new Error('Invalid latitude. Must be between -90 and 90');
+      }
+      if (address.coordinates_lng !== undefined && (address.coordinates_lng < -180 || address.coordinates_lng > 180)) {
+        throw new Error('Invalid longitude. Must be between -180 and 180');
+      }
+      if (address.email !== undefined && address.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email)) {
+        throw new Error('Invalid email format');
+      }
+
+      const fields = Object.keys(address).filter(k => k !== 'id');
+      if (fields.length === 0) return null;
+
+      const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(', ');
+      const values = fields.map(field => address[field as keyof typeof address]);
+      const queryStr = `
+        UPDATE office_addresses 
+        SET ${setClause}, updated_at = NOW(), updated_by = $${fields.length + 1}
+        WHERE id = $${fields.length + 2}
+        RETURNING *
+      `;
+      const result = await query(queryStr, [...values, userId || null, id]);
+      return (result?.rows?.[0] || null) as OfficeAddress | null;
+    } catch (error: any) {
+      console.error('❌ Error updating office address:', error);
+      throw error;
+    }
+  },
+
+  delete: async (id: number) => {
+    try {
+      // Check if this is the last active address
+      const activeCount = await query(
+        'SELECT COUNT(*) as count FROM office_addresses WHERE is_active = true'
+      );
+      const count = parseInt(activeCount?.rows?.[0]?.count || '0', 10);
+      if (count <= 1) {
+        throw new Error('Cannot delete the last active address');
+      }
+      
+      // Soft delete
+      const result = await query(
+        'UPDATE office_addresses SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *',
+        [id]
+      );
+      return result?.rows?.[0] as OfficeAddress | null;
+    } catch (error: any) {
+      console.error('❌ Error deleting office address:', error);
+      throw error;
+    }
+  }
 };
 

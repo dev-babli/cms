@@ -85,8 +85,32 @@ export async function DELETE(
     
     const { id: paramId } = await params;
     const id = parseInt(paramId);
+    
+    if (isNaN(id) || id <= 0) {
+      return createErrorResponse('Invalid team member ID', request, 400);
+    }
+    
+    // Verify team member exists
+    const allMembers = await teamMembers.getAll(false);
+    const existingMember = allMembers.find((m: any) => m.id === id);
+    
+    if (!existingMember) {
+      return createErrorResponse('Team member not found', request, 404);
+    }
+    
     const result = await teamMembers.delete(id);
-    return createSecureResponse({ success: true, data: result }, request);
+    console.log('✅ [Delete Team Member] Delete result:', result);
+    
+    if (!result || (result.changes === 0 && result.changes !== undefined)) {
+      console.error('❌ [Delete Team Member] No rows deleted.');
+      return createErrorResponse('Team member not found or already deleted', request, 404);
+    }
+    
+    return createSecureResponse({ 
+      success: true, 
+      message: 'Team member deleted successfully',
+      data: { id, deleted: true } 
+    }, request);
   } catch (error: any) {
     return createErrorResponse(error, request, 500);
   }

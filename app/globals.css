@@ -4,26 +4,66 @@
 
 @layer base {
   :root {
-    /* 2026 Design System - 8-Point Grid & WCAG 2.2 AA Compliant */
-    --background: 0 0% 100%;
-    --background-secondary: 247 8% 97%;
-    --background-tertiary: 210 40% 96%;
-    --foreground: 222 47% 11%; /* #111827 - 4.5:1 contrast */
-    --foreground-secondary: 215 16% 47%; /* #6B7280 - 4.5:1 contrast */
-    --foreground-tertiary: 216 12% 64%; /* #9CA3AF - 3:1 contrast */
+    /* Vision UI Design System - Dark Theme (Exact Match from Figma) */
+    /* Background Colors - Dark Blue/Black */
+    --background: 222 47% 11%; /* #0F172A - Main dark background */
+    --background-secondary: 215 28% 17%; /* #1E293B - Card backgrounds */
+    --background-tertiary: 215 25% 27%; /* #334155 - Hover states */
+    --background-elevated: 215 28% 17%; /* #1E293B - Elevated cards */
+    
+    /* Text Colors - White/Light Gray */
+    --foreground: 0 0% 100%; /* #FFFFFF - Primary text */
+    --foreground-secondary: 213 31% 91%; /* #CBD5E1 - Secondary text */
+    --foreground-tertiary: 215 20% 65%; /* #94A3B8 - Tertiary text */
     --foreground-inverse: 0 0% 100%;
-    --foreground-disabled: 215 28% 83%; /* #D1D5DB */
+    --foreground-disabled: 215 16% 47%; /* #64748B - Disabled text */
     
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --card: 215 28% 17%; /* #1E293B - Card background (dark) */
+    --card-foreground: 0 0% 100%; /* White text on cards */
+    --popover: 215 28% 17%; /* #1E293B - Popover background */
+    --popover-foreground: 0 0% 100%; /* White text */
     
-    /* Accent: Blue/Indigo (earned, not decorative) - WCAG 2.2 AA */
-    --primary: 217 91% 60%; /* #3B82F6 */
+    /* Primary Blue - Vision UI Exact Match */
+    --primary: 217 91% 60%; /* #3B82F6 - Main primary blue */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 221 83% 53%; /* #2563EB */
-    --primary-light: 214 100% 97%; /* #DBEAFE */
+    --primary-hover: 221 83% 53%; /* #2563EB - Hover state */
+    --primary-light: 217 100% 97%; /* #EFF6FF - Light blue */
+    --primary-dark: 221 83% 53%; /* #2563EB - Dark blue */
+    
+    /* Purple - Vision UI Gradient Accent */
+    --purple: 271 81% 56%; /* #A855F7 - Main purple */
+    --purple-foreground: 0 0% 100%;
+    --purple-hover: 271 81% 50%; /* #9333EA - Hover state */
+    --purple-light: 271 100% 97%; /* #FAF5FF - Light purple */
+    
+    /* Secondary: Sky Blue (Modernize #49BEFF) */
+    --secondary: 195 100% 66%; /* #49BEFF */
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 195 95% 58%; /* #23afdb */
+    --secondary-light: 195 100% 97%; /* #E8F7FF */
+    
+    /* Success: Modern Green (Modernize #13DEB9) */
+    --success: 170 84% 50%; /* #13DEB9 */
+    --success-foreground: 0 0% 100%;
+    --success-light: 170 100% 97%; /* #E6FFFA */
+    --success-hover: 170 80% 45%; /* #02b3a9 */
+    
+    /* Info: Light Blue (Modernize #539BFF) */
+    --info: 217 100% 66%; /* #539BFF */
+    --info-foreground: 0 0% 100%;
+    --info-light: 217 100% 97%; /* #EBF3FE */
+    --info-hover: 217 95% 60%; /* #1682d4 */
+    
+    /* Warning: Orange (Modernize #FFAE1F) */
+    --warning: 38 100% 56%; /* #FFAE1F */
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 100% 97%; /* #FEF5E5 */
+    --warning-hover: 38 95% 50%; /* #ae8e59 */
+    
+    /* Error: Coral (Modernize #FA896B) */
+    --error: 12 95% 70%; /* #FA896B */
+    --error-foreground: 0 0% 100%;
+    --error-light: 12 100% 97%; /* #FDEDE8 */
     
     /* Neutral Palette - Minimal */
     --secondary: 210 40% 98%;
@@ -33,19 +73,18 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     
-    /* Borders - Light gray */
-    --border: 214 32% 91%; /* #E5E7EB */
-    --border-hover: 215 28% 83%; /* #D1D5DB */
-    --border-focus: 217 91% 60%; /* #3B82F6 */
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%; /* Focus ring - 2px visible */
+    /* Borders - Dark theme borders */
+    --border: 215 25% 27%; /* #334155 - Default border */
+    --border-hover: 215 20% 40%; /* #475569 - Hover border */
+    --border-focus: 217 91% 60%; /* #3B82F6 - Focus border */
+    --input: 215 25% 27%; /* #334155 - Input border */
+    --ring: 217 91% 60%; /* #3B82F6 - Focus ring */
     
-    /* State Colors - WCAG 2.2 AA Compliant */
-    --destructive: 0 72% 51%; /* #EF4444 - 4.5:1 contrast */
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%; /* #10B981 - 4.5:1 contrast */
-    --warning: 38 92% 50%; /* #F59E0B - 4.5:1 contrast */
-    --info: 217 91% 60%; /* #3B82F6 */
+    /* State Colors - WCAG 2.2 AA Compliant (using Modernize palette) */
+    --destructive: 12 95% 70%; /* #FA896B - Modernize error */
+    --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 12 90% 65%; /* #f3704d */
+    --destructive-light: 12 100% 97%; /* #FDEDE8 */
     
     /* Interactive States - 2026: More subtle */
     --interactive-hover: 210 40% 98%; /* #F9FAFB */
@@ -90,37 +129,20 @@
     --focus-width: 2px;
     --focus-offset: 2px;
     --touch-target-min: 44px;
+    
+    /* Sidebar specific variables */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 98%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
   }
 
-  .dark {
-    /* Dark mode - minimal, not primary focus */
-    --background: 222 47% 11%;
-    --background-secondary: 222 47% 9%;
-    --foreground: 0 0% 98%;
-    --foreground-secondary: 215 20% 65%;
-    --foreground-tertiary: 215 16% 47%;
-    --card: 222 47% 13%;
-    --card-foreground: 0 0% 98%;
-    --popover: 222 47% 13%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 221 83% 53%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 0 0% 98%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 0 0% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 17%;
-    --border-hover: 217 28% 25%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
-    --interactive-hover: 217 33% 17%;
-    --interactive-active: 217 33% 20%;
-  }
+  /* Vision UI uses dark theme by default - no separate dark class needed */
+  /* All colors are already set for dark theme above */
 }
 
 @layer base {
@@ -134,9 +156,10 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-size: var(--font-size-body); /* 15px - 2026 standard */
-    line-height: 1.6; /* 2026: Increased for better readability */
+    font-size: 14px; /* Vision UI standard */
+    line-height: 1.5;
     color: hsl(var(--foreground));
+    background-color: hsl(var(--background)); /* Dark background */
   }
   
   /* 2026: Respect reduced motion preferences */
@@ -478,8 +501,26 @@
 
   .ProseMirror li {
     margin: 0.25rem 0;
-    padding-left: 0.5rem;
+    padding-left: 0;
     display: list-item;
+    list-style-position: outside;
+  }
+
+  /* Ensure list items contain paragraphs properly */
+  .ProseMirror li > p {
+    margin: 0;
+    display: inline;
+  }
+
+  .ProseMirror li > p:first-child {
+    display: inline;
+  }
+
+  /* Fix bullet alignment - bullets should appear beside text */
+  .ProseMirror ul li,
+  .ProseMirror ol li {
+    padding-left: 0.5rem;
+    text-indent: 0;
   }
 
   /* Professional heading styles */
@@ -500,27 +541,39 @@
   }
 
   .ProseMirror h3 {
-    font-size: 1.75rem !important;
-    font-weight: 700 !important;
-    margin-top: 1.5rem !important;
-    margin-bottom: 0.875rem !important;
-    line-height: 1.3 !important;
-    color: #0f172a !important;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.875rem;
+    line-height: 1.3;
+    color: #0f172a;
     letter-spacing: -0.01em;
     border-bottom: 2px solid #e2e8f0;
     padding-bottom: 0.5rem;
   }
 
+  /* Inline font-size styles override default heading sizes */
+  .ProseMirror h3[style*="font-size"],
+  .ProseMirror h3 [style*="font-size"] {
+    font-size: inherit;
+  }
+
   .ProseMirror h4 {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-    margin-top: 1.25rem !important;
-    margin-bottom: 0.75rem !important;
-    line-height: 1.35 !important;
-    color: #1e293b !important;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.35;
+    color: #1e293b;
     letter-spacing: -0.005em;
     border-left: 4px solid #3b82f6;
     padding-left: 0.75rem;
+  }
+
+  /* Inline font-size styles override default heading sizes */
+  .ProseMirror h4[style*="font-size"],
+  .ProseMirror h4 [style*="font-size"] {
+    font-size: inherit;
   }
 
   .ProseMirror h5 {
@@ -545,9 +598,22 @@
 
   /* Preserve inline styles for font-size, color, etc. */
   /* Inline styles from style attribute have highest specificity and will work naturally */
+  /* Ensure font-size inline styles are applied with proper specificity */
   .ProseMirror [style*="font-size"] {
-    /* Ensure inline font-size styles are preserved and displayed */
-    /* The style attribute already has highest specificity, so no override needed */
+    /* Inline styles have highest specificity - no override needed */
+  }
+  
+  /* Ensure font-size works on all elements including headings */
+  .ProseMirror p[style*="font-size"],
+  .ProseMirror span[style*="font-size"],
+  .ProseMirror div[style*="font-size"],
+  .ProseMirror h1[style*="font-size"],
+  .ProseMirror h2[style*="font-size"],
+  .ProseMirror h3[style*="font-size"],
+  .ProseMirror h4[style*="font-size"],
+  .ProseMirror h5[style*="font-size"],
+  .ProseMirror h6[style*="font-size"] {
+    /* Inline font-size styles take precedence */
   }
 
   /* Text alignment styles */
@@ -658,11 +724,52 @@
   }
 
   /* Ensure all inline styles are preserved in rendered content */
-  .prose [style*="font-size"],
-  .prose [style*="color"],
-  .prose [style*="background-color"],
+  /* Inline styles have highest specificity and will override prose classes */
+  .prose [style*="font-size"] {
+    /* Inline font-size styles take precedence over prose typography */
+  }
+  
+  .prose [style*="color"] {
+    /* Inline color styles take precedence */
+  }
+  
+  .prose [style*="background-color"] {
+    /* Inline background-color styles take precedence */
+  }
+  
   .prose [style*="text-align"] {
-    /* Inline styles have highest specificity */
+    /* Inline text-align styles take precedence */
+  }
+  
+  /* Ensure font-size works on all prose elements */
+  .prose p[style*="font-size"],
+  .prose span[style*="font-size"],
+  .prose div[style*="font-size"],
+  .prose h1[style*="font-size"],
+  .prose h2[style*="font-size"],
+  .prose h3[style*="font-size"],
+  .prose h4[style*="font-size"],
+  .prose h5[style*="font-size"],
+  .prose h6[style*="font-size"] {
+    /* Inline font-size styles override prose typography */
+  }
+  
+  /* Fix list structure in prose - ensure bullets appear inline */
+  .prose ul li,
+  .prose ol li {
+    padding-left: 0;
+    text-indent: 0;
+  }
+  
+  .prose ul li > p,
+  .prose ol li > p {
+    margin: 0;
+    display: inline;
+  }
+  
+  .prose ul li > p:first-child,
+  .prose ol li > p:first-child {
+    display: inline;
   }
 
   /* Table styles for rendered content */
