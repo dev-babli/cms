@@ -1361,14 +1361,13 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                 <div className="relative bg-white overflow-hidden w-full">
                                 {showRuler && <Ruler />}
                                 <FloatingToolbar editor={editor} />
-                                <div 
-                                    className="transition-transform duration-300 overflow-auto w-full"
-                                    style={{ 
-                                        transform: zoom !== 100 ? `scale(${zoom / 100})` : 'none', 
+                                <div
+                                    className="transition-transform duration-300 overflow-visible w-full"
+                                    style={{
+                                        transform: zoom !== 100 ? `scale(${zoom / 100})` : 'none',
                                         transformOrigin: 'top left',
                                         minHeight: zoom !== 100 ? `${100 / (zoom / 100)}%` : 'auto',
-                                        maxHeight: 'calc(100vh - 300px)',
-                                        width: zoom !== 100 ? `${100 / (zoom / 100)}%` : '100%'
+                                        width: zoom !== 100 ? `${100 / (zoom / 100)}%` : '100%',
                                     }}
                                 >
                                     <div id="editor-description" className="sr-only">

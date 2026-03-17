@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { motion } from "framer-motion";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { RxChevronDown, RxChevronRight } from "react-icons/rx";
 
 const useRelume = () => {
@@ -40,6 +40,30 @@ const useRelume = () => {
 
 export function Navbar5() {
   const useActive = useRelume();
+  const [featuredPosts, setFeaturedPosts] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setFeaturedLoading(true);
+        const res = await fetch("/api/cms/blog?published=true&limit=2", { cache: "no-store" });
+        const json = await res.json().catch(() => null);
+        const data = json?.success ? json.data : [];
+        if (!cancelled) setFeaturedPosts(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setFeaturedPosts([]);
+      } finally {
+        if (!cancelled) setFeaturedLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <section className="relative z-[999] flex w-full items-center justify-between border-b border-scheme-border bg-scheme-background lg:min-h-18 lg:px-[5%]">
       <div className="size-full lg:flex lg:items-center lg:justify-between">
@@ -318,68 +342,73 @@ export function Navbar5() {
                           Featured insights
                         </h4>
                         <div className="grid auto-cols-fr grid-cols-1 grid-rows-[auto_auto] items-start gap-y-2 lg:grid-rows-[auto]">
-                          <a
-                            href="#"
-                            className="flex auto-cols-fr grid-cols-[0.6fr_1fr] flex-col gap-x-6 py-2 md:grid"
-                          >
-                            <div className="relative w-full pt-[66.66%]">
-                              <img
-                                src="https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg"
-                                alt="Relume placeholder image 1"
-                                className="absolute inset-0 size-full object-cover"
-                              />
-                            </div>
-                            <div className="mt-4 flex flex-col justify-start md:mt-0">
-                              <h5 className="mb-1 font-semibold">
-                                AI transformation strategies
-                              </h5>
-                              <p className="text-small">
-                                Exploring machine learning techniques for
-                                enterprise innovation
-                              </p>
-                              <div className="mt-1.5">
-                                <Button
-                                  title="Read more"
-                                  variant="link"
-                                  size="link"
-                                  className="text-small underline"
-                                >
-                                  Read more
-                                </Button>
+                          {featuredLoading ? (
+                            <>
+                              <div className="flex auto-cols-fr grid-cols-[0.6fr_1fr] flex-col gap-x-6 py-2 md:grid">
+                                <div className="relative w-full pt-[66.66%] bg-white/10" />
+                                <div className="mt-4 flex flex-col justify-start md:mt-0">
+                                  <div className="h-4 w-2/3 bg-white/10 rounded" />
+                                  <div className="mt-2 h-3 w-full bg-white/10 rounded" />
+                                  <div className="mt-2 h-3 w-4/5 bg-white/10 rounded" />
+                                </div>
                               </div>
-                            </div>
-                          </a>
-                          <a
-                            href="#"
-                            className="flex auto-cols-fr grid-cols-[0.6fr_1fr] flex-col gap-x-6 py-2 md:grid"
-                          >
-                            <div className="relative w-full pt-[66.66%]">
-                              <img
-                                src="https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg"
-                                alt="Relume placeholder image 2"
-                                className="absolute inset-0 size-full object-cover"
-                              />
-                            </div>
-                            <div className="mt-4 flex flex-col justify-start md:mt-0">
-                              <h5 className="mb-1 font-semibold">
-                                Future of AI
-                              </h5>
-                              <p className="text-small">
-                                Emerging trends in artificial intelligence and
-                                machine learning
-                              </p>
-                              <div className="mt-1.5">
-                                <Button
-                                  title="Read more"
-                                  variant="link"
-                                  size="link"
-                                  className="text-small underline"
-                                >
-                                  Read more
-                                </Button>
+                              <div className="flex auto-cols-fr grid-cols-[0.6fr_1fr] flex-col gap-x-6 py-2 md:grid">
+                                <div className="relative w-full pt-[66.66%] bg-white/10" />
+                                <div className="mt-4 flex flex-col justify-start md:mt-0">
+                                  <div className="h-4 w-2/3 bg-white/10 rounded" />
+                                  <div className="mt-2 h-3 w-full bg-white/10 rounded" />
+                                  <div className="mt-2 h-3 w-4/5 bg-white/10 rounded" />
+                                </div>
                               </div>
+                            </>
+                          ) : featuredPosts.length > 0 ? (
+                            featuredPosts.slice(0, 2).map((post) => (
+                              <a
+                                key={post.id || post.slug}
+                                href={post.slug ? `/blog/${post.slug}` : "/blog"}
+                                className="flex auto-cols-fr grid-cols-[0.6fr_1fr] flex-col gap-x-6 py-2 md:grid"
+                              >
+                                <div className="relative w-full pt-[66.66%] bg-white/10">
+                                  {post.featured_image || post.banner_image ? (
+                                    <img
+                                      src={post.featured_image || post.banner_image}
+                                      alt={post.title || "Blog post"}
+                                      className="absolute inset-0 size-full object-cover"
+                                    />
+                                  ) : null}
+                                </div>
+                                <div className="mt-4 flex flex-col justify-start md:mt-0">
+                                  <h5 className="mb-1 font-semibold">
+                                    {post.title || "Untitled"}
+                                  </h5>
+                                  {post.excerpt ? (
+                                    <p className="text-small">
+                                      {String(post.excerpt).replace(/<[^>]*>/g, "").slice(0, 120)}
+                                      {String(post.excerpt).replace(/<[^>]*>/g, "").length > 120 ? "…" : ""}
+                                    </p>
+                                  ) : null}
+                                  <div className="mt-1.5">
+                                    <Button
+                                      title="Read more"
+                                      variant="link"
+                                      size="link"
+                                      className="text-small underline"
+                                    >
+                                      Read more
+                                    </Button>
+                                  </div>
+                                </div>
+                              </a>
+                            ))
+                          ) : (
+                            <div className="text-small text-white/80">
+                              No published posts yet.{" "}
+                              <a className="underline" href="/blog">
+                                View blog
+                              </a>
+                              .
                             </div>
-                          </a>
+                          )}
                         </div>
                         <div className="flex items-center">
                           <Button

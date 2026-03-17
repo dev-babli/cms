@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -58,17 +57,46 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         },
         ref
     ) => {
-        const Comp = asChild ? Slot : "button";
+        const mergedClassName = cn(buttonVariants({ variant, size, className }));
+
+        if (asChild) {
+            // Radix Slot is strict (React.Children.only). We implement "asChild" ourselves
+            // so adding iconLeft/iconRight can't accidentally create multiple root children.
+            if (!React.isValidElement(children)) {
+                return (
+                    <span className={mergedClassName}>
+                        {iconLeft && <span className="mr-2">{iconLeft}</span>}
+                        {children}
+                        {iconRight && <span className="ml-2">{iconRight}</span>}
+                    </span>
+                );
+            }
+
+            const child = children as React.ReactElement<any>;
+            const childClassName = cn(mergedClassName, child.props?.className);
+
+            return React.cloneElement(
+                child,
+                {
+                    ...props,
+                    className: childClassName,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ref: ref as any,
+                },
+                <>
+                    {iconLeft && <span className="mr-2">{iconLeft}</span>}
+                    {child.props?.children}
+                    {iconRight && <span className="ml-2">{iconRight}</span>}
+                </>
+            );
+        }
+
         return (
-            <Comp
-                className={cn(buttonVariants({ variant, size, className }))}
-                ref={ref}
-                {...props}
-            >
+            <button className={mergedClassName} ref={ref} {...props}>
                 {iconLeft && <span className="mr-2">{iconLeft}</span>}
                 {children}
                 {iconRight && <span className="ml-2">{iconRight}</span>}
-            </Comp>
+            </button>
         );
     }
 );

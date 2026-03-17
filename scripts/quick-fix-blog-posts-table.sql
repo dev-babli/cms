@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   published BOOLEAN DEFAULT false,
   publish_date TIMESTAMP,
   scheduled_publish_date TIMESTAMP,
+  created_by TEXT,
   -- SEO Fields
   meta_title TEXT,
   meta_description TEXT,

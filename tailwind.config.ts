@@ -120,7 +120,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // Needed for `prose` classes used when rendering rich-text HTML
+    require("@tailwindcss/typography"),
+  ],
 };
 
 export default config;

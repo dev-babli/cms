@@ -27,10 +27,12 @@ export function ThemeSelector({ onThemeChange }: ThemeSelectorProps) {
     return (
         <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-                <Button variant="ghost" size="sm" className="h-9">
-                    <Palette className="w-4 h-4 mr-2" />
-                    Theme
-                </Button>
+                <span>
+                    <Button variant="ghost" size="sm" className="h-9">
+                        <Palette className="w-4 h-4 mr-2" />
+                        Theme
+                    </Button>
+                </span>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
                 <DropdownMenu.Content className="min-w-[180px] bg-white border border-border rounded-lg shadow-xl p-1 z-50">

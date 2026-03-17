@@ -74,10 +74,12 @@ export function ExportMenu({ editor }: ExportMenuProps) {
     return (
         <DropdownMenu.Root open={isOpen} onOpenChange={setIsOpen}>
             <DropdownMenu.Trigger asChild>
-                <Button variant="ghost" size="sm" className="h-9">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                </Button>
+                <span>
+                    <Button variant="ghost" size="sm" className="h-9">
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                </span>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
                 <DropdownMenu.Content className="min-w-[200px] bg-white border border-border rounded-lg shadow-xl p-1 z-50">

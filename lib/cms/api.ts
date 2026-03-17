@@ -1,7 +1,36 @@
 import db, { query, execute, queryAll } from '../db';
 import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Lead, Category } from './types';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Blog Posts
+let supabaseAdminClient: SupabaseClient | null = null;
+
+function getSupabaseAdmin(): SupabaseClient {
+  if (supabaseAdminClient) return supabaseAdminClient;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase environment variables missing (SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY).');
+  }
+  supabaseAdminClient = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return supabaseAdminClient;
+}
+
+function shouldFallbackToSupabase(error: any): boolean {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    msg.includes('circuit breaker open') ||
+    msg.includes('unable to establish connection') ||
+    msg.includes('self-signed certificate') ||
+    msg.includes('self_signed_cert_in_chain') ||
+    msg.includes('getaddrinfo') ||
+    msg.includes('econnrefused') ||
+    msg.includes('etimedout')
+  );
+}
+
 export const blogPosts = {
   getAll: async (published = false, limit?: number) => {
     try {
@@ -22,6 +51,24 @@ export const blogPosts = {
       }
       return result?.rows || [];
     } catch (error: any) {
+      if (shouldFallbackToSupabase(error)) {
+        console.warn('⚠️ Falling back to Supabase API for blogPosts.getAll:', error?.message || error);
+        const supabase = getSupabaseAdmin();
+        const queryBuilder = supabase
+          .from('blog_posts')
+          .select('*')
+          .order(published ? 'publish_date' : 'created_at', { ascending: false, nullsFirst: false });
+        // Be tolerant to legacy schemas where `published` may be stored as boolean, text, or number.
+        // Supabase `.eq('published', true)` would return 0 rows if the column is `text` containing "true"/"1".
+        const filtered = published
+          ? queryBuilder.or('published.eq.true,published.eq.1,published.eq."1",published.eq."true"')
+          : queryBuilder;
+        const limited = typeof limit === 'number' ? filtered.limit(limit) : filtered;
+        const { data, error: sbError } = await limited;
+        if (sbError) throw new Error(`Supabase fetch failed: ${sbError.message}`);
+        return data || [];
+      }
+
       console.error('❌ Error in blogPosts.getAll:', error);
       throw error;
     }
@@ -32,6 +79,17 @@ export const blogPosts = {
       const result = await query('SELECT * FROM blog_posts WHERE slug = $1', [slug]);
       return (result?.rows?.[0] || null) as BlogPost | null;
     } catch (error: any) {
+      if (shouldFallbackToSupabase(error)) {
+        console.warn('⚠️ Falling back to Supabase API for blogPosts.getBySlug:', error?.message || error);
+        const supabase = getSupabaseAdmin();
+        const { data, error: sbError } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('slug', slug)
+          .maybeSingle();
+        if (sbError) throw new Error(`Supabase fetch failed: ${sbError.message}`);
+        return (data || null) as BlogPost | null;
+      }
       console.error('Error fetching blog post by slug:', error);
       console.error('Slug:', slug);
       console.error('Error details:', {
@@ -46,30 +104,47 @@ export const blogPosts = {
   
   create: async (post: Omit<BlogPost, 'id'> | any) => {
     // Use PostgreSQL syntax with $1, $2, etc. placeholders
-    const sql = `
-      INSERT INTO blog_posts (
-        slug, title, excerpt, content, author, featured_image, banner_image, category, tags, 
-        published, publish_date, scheduled_publish_date,
-        meta_title, meta_description, meta_keywords, canonical_url,
-        og_title, og_description, og_image, og_type, schema_markup, created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      RETURNING *
-    `;
-    const values = [
-      post.slug, 
-      post.title, 
-      post.excerpt || '', 
-      post.content || '', 
-      post.author || '', 
-      post.featured_image || '', 
+    // Note: Some deployments may not yet have the `created_by` column on `blog_posts`.
+    // To avoid blocking publishing, we attempt the insert with `created_by` first and
+    // gracefully retry without it if the column is missing.
+
+    const baseFields = [
+      'slug',
+      'title',
+      'excerpt',
+      'content',
+      'author',
+      'featured_image',
+      'banner_image',
+      'category',
+      'tags',
+      'published',
+      'publish_date',
+      'scheduled_publish_date',
+      'meta_title',
+      'meta_description',
+      'meta_keywords',
+      'canonical_url',
+      'og_title',
+      'og_description',
+      'og_image',
+      'og_type',
+      'schema_markup',
+    ];
+
+    const baseValues = [
+      post.slug,
+      post.title,
+      post.excerpt || '',
+      post.content || '',
+      post.author || '',
+      post.featured_image || '',
       post.banner_image || '',
-      post.category || '', 
-      post.tags || '', 
-      post.published || false, 
+      post.category || '',
+      post.tags || '',
+      post.published || false,
       post.publish_date || new Date().toISOString(),
       post.scheduled_publish_date || null,
-      // SEO Fields
       post.meta_title || null,
       post.meta_description || null,
       post.meta_keywords || null,
@@ -79,11 +154,48 @@ export const blogPosts = {
       post.og_image || null,
       post.og_type || 'article',
       post.schema_markup || null,
-      post.created_by || null
     ];
-    const result = await query(sql, values);
-    // Return in the same format as before for compatibility
-    return { row: result?.rows?.[0] || null, rows: result?.rows || [] };
+
+    const runInsert = async (includeCreatedBy: boolean) => {
+      const fields = includeCreatedBy ? [...baseFields, 'created_by'] : baseFields;
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
+      const sql = `
+        INSERT INTO blog_posts (${fields.join(', ')})
+        VALUES (${placeholders})
+        RETURNING *
+      `;
+      const values = includeCreatedBy ? [...baseValues, post.created_by || null] : baseValues;
+      const result = await query(sql, values);
+      return { row: result?.rows?.[0] || null, rows: result?.rows || [] };
+    };
+
+    try {
+      return await runInsert(true);
+    } catch (error: any) {
+      const msg = String(error?.message || '');
+      // Typical Postgres error: column "created_by" of relation "blog_posts" does not exist
+      if (msg.toLowerCase().includes('created_by') && msg.toLowerCase().includes('does not exist')) {
+        console.warn('⚠️ blog_posts.created_by missing; retrying insert without created_by');
+        return await runInsert(false);
+      }
+
+      if (shouldFallbackToSupabase(error)) {
+        console.warn('⚠️ Falling back to Supabase API for blogPosts.create:', error?.message || error);
+        const supabase = getSupabaseAdmin();
+        const { data, error: sbError } = await supabase
+          .from('blog_posts')
+          .insert({
+            ...post,
+            // ensure timestamps exist if caller omitted them
+            publish_date: post.publish_date || new Date().toISOString(),
+          })
+          .select('*')
+          .single();
+        if (sbError) throw new Error(`Supabase insert failed: ${sbError.message}`);
+        return { row: data || null, rows: data ? [data] : [] };
+      }
+      throw error;
+    }
   },
   
   update: async (id: number, post: Partial<BlogPost>) => {

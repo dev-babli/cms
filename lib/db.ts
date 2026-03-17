@@ -30,14 +30,19 @@ function getConnectionConfig() {
   // For Supabase, use smaller pool size to avoid connection limits
   // Free tier: 60 direct connections, 200 pooler connections
   // Use pooler (port 6543) for better connection management
-  const isSupabase = connectionString.includes('supabase');
-  const usePooler = isSupabase && connectionString.includes(':6543');
+  const isSupabase =
+    connectionString.includes('supabase') ||
+    connectionString.includes('.supabase.co') ||
+    connectionString.includes('pooler.supabase.com');
+  const usePooler =
+    isSupabase &&
+    (connectionString.includes(':6543') || connectionString.includes('pooler.supabase.com'));
   
   return {
     connectionString,
-    ssl: isSupabase 
-      ? { rejectUnauthorized: false } 
-      : false,
+    // Supabase Postgres requires SSL. In many Node environments (especially Windows/corporate networks)
+    // the certificate chain can be reported as self-signed. We explicitly disable strict verification.
+    ssl: { rejectUnauthorized: false },
     // Reduce pool size to avoid "max connections" errors
     // Supabase free tier has connection limits
     max: usePooler ? 5 : 3, // Smaller pool for direct connections, slightly larger for pooler

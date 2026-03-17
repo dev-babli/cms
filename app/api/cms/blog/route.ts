@@ -18,11 +18,23 @@ import { logAudit } from '@/lib/audit';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const published = searchParams.get('published') === 'true';
+    const publishedParam = searchParams.get('published');
+    const filterMode: 'all' | 'published' | 'unpublished' =
+      publishedParam === 'true' ? 'published'
+      : publishedParam === 'false' ? 'unpublished'
+      : 'all';
+    const publishedFlag = filterMode === 'published';
+    const limitParam = searchParams.get('limit');
+    const limit =
+      limitParam && /^\d+$/.test(limitParam)
+        ? Math.min(parseInt(limitParam, 10), 50)
+        : undefined;
     
     let posts;
     try {
-      posts = await blogPosts.getAll(published);
+      // For now we only use the database-level "published" filter when we explicitly
+      // want published posts. Drafts/unpublished are filtered in-process below.
+      posts = await blogPosts.getAll(publishedFlag, limit);
     } catch (dbError: any) {
       console.error('❌ Database error in blogPosts.getAll:', dbError);
       // Return JSON error instead of crashing
@@ -52,21 +64,43 @@ export async function GET(request: NextRequest) {
     // Normalize published field in response and filter by publish_date
     const now = new Date();
     const normalizedPosts = Array.isArray(posts) ? posts
-      .map(post => ({
-        ...post,
-        published: post.published === true || post.published === 'true' || post.published === 1 || post.published === '1',
-      }))
+      .map(post => {
+        const isPublished =
+          post.published === true ||
+          post.published === 'true' ||
+          post.published === 1 ||
+          post.published === '1';
+        const hasPublishDate = !!post.publish_date;
+        const publishDate = hasPublishDate ? new Date(post.publish_date) : null;
+        const isEffectivePublished =
+          isPublished && (!publishDate || publishDate <= now);
+        return {
+          ...post,
+          published: isPublished,
+          _effectivePublished: isEffectivePublished,
+        };
+      })
       .filter(post => {
-        // If published is true, also check publish_date
-        if (published && post.publish_date) {
-          const publishDate = new Date(post.publish_date);
-          return publishDate <= now;
+        if (filterMode === 'published') {
+          return (post as any)._effectivePublished;
         }
-        return published ? post.published : true; // If not filtering by published, return all
-      }) : [];
+        if (filterMode === 'unpublished') {
+          return !(post as any)._effectivePublished;
+        }
+        return true; // all
+      })
+      .map(post => {
+        // Strip internal helper flag before sending to clients
+        const { _effectivePublished, ...rest } = post as any;
+        return rest;
+      })
+      : [];
     
     // Log for debugging
-    console.log(`📝 [Blog API] Returning ${normalizedPosts.length} ${published ? 'published' : 'all'} posts (from ${posts?.length || 0} total)`);
+    console.log(
+      `📝 [Blog API] Returning ${normalizedPosts.length} ` +
+      `${filterMode === 'all' ? 'all' : filterMode} posts (from ${posts?.length || 0} total)`
+    );
     if (normalizedPosts.length > 0) {
       console.log('📝 [Blog API] Post slugs:', normalizedPosts.map((p: any) => ({ 
         slug: p.slug, 

@@ -33,7 +33,9 @@ export function ContextMenuComponent({ editor, children }: ContextMenuComponentP
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger asChild>
-                {children}
+                <div>
+                    {children}
+                </div>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Content className="min-w-[200px] bg-white border border-border rounded-lg shadow-xl p-1 z-50">
