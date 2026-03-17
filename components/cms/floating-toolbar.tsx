@@ -4,6 +4,8 @@ import { Editor } from '@tiptap/core';
 import { useState, useEffect } from 'react';
 import { Bold, Italic, Underline, Link as LinkIcon, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 
+const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'] as const;
+
 interface FloatingToolbarProps {
     editor: Editor;
 }
@@ -23,7 +25,7 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
                     const viewportHeight = window.innerHeight;
                     const viewportWidth = window.innerWidth;
                     const toolbarHeight = 50;
-                    const toolbarWidth = 300;
+                    const toolbarWidth = 400;
                     
                     // Calculate position based on selection midpoint
                     const midTop = (startCoords.top + endCoords.top) / 2;
@@ -101,10 +103,12 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
 
     const editorRect = editor.view.dom.getBoundingClientRect();
     
+    const currentFontSize = editor.getAttributes('textStyle')?.fontSize ?? 'default';
+
     // Sanity Studio Design - Minimal Floating Toolbar
     return (
         <div
-            className="fixed z-50 bg-white border border-[#E5E7EB] rounded-md p-1.5 flex items-center gap-0.5"
+            className="fixed z-50 bg-white border border-[#E5E7EB] rounded-md p-1.5 flex items-center gap-1 flex-wrap max-w-[95vw]"
             style={{
                 top: `${position.top + editorRect.top + window.scrollY}px`,
                 left: `${position.left + editorRect.left}px`,
@@ -148,6 +152,28 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
             >
                 <Underline className="w-4 h-4" />
             </button>
+            <div className="w-px h-5 bg-[#E5E7EB] mx-0.5" />
+            <select
+                value={currentFontSize === 'default' || !currentFontSize ? '' : currentFontSize}
+                onChange={(e) => {
+                    const size = e.target.value;
+                    if (size) {
+                        editor.chain().focus().setFontSize(size).run();
+                    } else {
+                        editor.chain().focus().unsetFontSize().run();
+                    }
+                }}
+                className="h-8 px-2 text-sm border border-[#E5E7EB] rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6] min-w-[64px] text-[#111827]"
+                title="Font Size"
+                aria-label="Font size"
+            >
+                <option value="">Size</option>
+                {FONT_SIZES.map((s) => (
+                    <option key={s} value={s}>
+                        {parseInt(s, 10)}
+                    </option>
+                ))}
+            </select>
             <div className="w-px h-5 bg-[#E5E7EB] mx-0.5" />
             <button
                 type="button"

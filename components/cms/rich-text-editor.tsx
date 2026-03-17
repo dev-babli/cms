@@ -554,8 +554,8 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                 <>
                     {/* Ribbon-Style Toolbar */}
                     <div className="bg-white border-b border-[#E5E7EB]">
-                        {/* Tab Navigation */}
-                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto">
+                        {/* Tab Navigation - proper spacing to prevent "HomeInsertDesignLayoutReview" merge */}
+                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto gap-1 min-w-0">
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -563,7 +563,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('home');
                                 }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors relative ${
                                     activeTab === 'home'
                                         ? 'text-primary border-b-2 border-primary bg-primary/5'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -578,7 +578,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('insert');
                                 }}
-                                className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors relative ${
                                     activeTab === 'insert'
                                         ? 'text-primary border-b-2 border-primary bg-primary/5'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -593,7 +593,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('design');
                                 }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'design'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
@@ -608,7 +608,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('layout');
                                 }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'layout'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
@@ -623,7 +623,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('review');
                                 }}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
                                     activeTab === 'review'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
