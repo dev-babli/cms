@@ -10,6 +10,7 @@ export const BlogPostSchema = z.object({
   author: z.string().nullish(),
   featured_image: z.string().nullish(),
   banner_image: z.string().nullish(),
+  hero_text_color: z.enum(['auto', 'white', 'black']).nullish(),
   category: z.string().nullish(),
   tags: z.string().nullish(),
   published: z.boolean().default(false),
@@ -29,6 +30,25 @@ export const BlogPostSchema = z.object({
 });
 
 export type BlogPost = z.infer<typeof BlogPostSchema>;
+
+// Industry Page (Hero) Schema
+export const IndustryPageSchema = z.object({
+  id: z.number().optional(),
+  slug: z.string().min(1),
+  hero_title: z.string().min(1),
+  hero_subtitle: z.string().nullish(),
+  hero_description: z.string().nullish(),
+  hero_button_text: z.string().nullish(),
+  hero_button_link: z.string().nullish(),
+  hero_background_image: z.string().nullish(),
+  hero_text_color: z.enum(['auto', 'white', 'black']).nullish(),
+  hero_features: z.array(z.string()).nullish(),
+  published: z.boolean().default(false),
+  updated_at: z.string().optional(),
+  created_at: z.string().optional(),
+});
+
+export type IndustryPage = z.infer<typeof IndustryPageSchema>;
 
 // Team Member Schema
 export const TeamMemberSchema = z.object({

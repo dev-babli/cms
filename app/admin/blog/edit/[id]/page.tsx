@@ -31,6 +31,7 @@ export default function EditBlogPost({ params }: PageProps) {
         author: "",
         featured_image: "",
         banner_image: "",
+        hero_text_color: "auto",
         category: "",
         tags: "",
         published: false,
@@ -75,10 +76,11 @@ export default function EditBlogPost({ params }: PageProps) {
                     published: data.data.published,
                     hasBannerImage: !!data.data.banner_image 
                 });
-                // Ensure all fields are set, including banner_image
+                // Ensure all fields are set, including banner_image and hero_text_color
                 setFormData({
                     ...data.data,
                     banner_image: data.data.banner_image || "",
+                    hero_text_color: data.data.hero_text_color || "auto",
                 });
             } else {
                 console.error('❌ [Edit Blog] Failed to load post:', data.error);
@@ -252,9 +254,9 @@ export default function EditBlogPost({ params }: PageProps) {
 
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                <Label htmlFor="featured_image">Featured Image URL</Label>
+                                <Label htmlFor="featured_image">Featured Image URL (Right side of Hero)</Label>
                                     <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
-                                        Recommended: 1200×630px (16:9) or 1920×1080px
+                                        Recommended: 800×600px (4:3 Ratio)
                                     </span>
                                 </div>
                                 <Input
@@ -279,10 +281,27 @@ export default function EditBlogPost({ params }: PageProps) {
                             </div>
 
                             <div>
+                                <Label htmlFor="hero_text_color">Hero Text Color</Label>
+                                <select
+                                    id="hero_text_color"
+                                    value={formData.hero_text_color}
+                                    onChange={(e) => setFormData({ ...formData, hero_text_color: e.target.value })}
+                                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                                >
+                                    <option value="auto">Auto (Depends on theme)</option>
+                                    <option value="white">White (For dark backgrounds)</option>
+                                    <option value="black">Black (For light backgrounds)</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Choose the text color for the hero section based on your banner image.
+                                </p>
+                            </div>
+
+                            <div>
                                 <div className="flex items-center justify-between mb-2">
-                                <Label htmlFor="banner_image">Banner Image URL (Hero Section)</Label>
+                                <Label htmlFor="banner_image">Background/Banner Image URL (Hero Section)</Label>
                                     <span className="text-xs text-muted-foreground bg-blue-50 px-2 py-1 rounded">
-                                        Recommended: 1920×1080px (Full-width hero banner)
+                                        Recommended: 1920×600px (Full-width hero banner)
                                     </span>
                                 </div>
                                 <Input

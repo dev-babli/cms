@@ -1,5 +1,5 @@
 import db, { query, execute, queryAll } from '../db';
-import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Lead, Category } from './types';
+import type { BlogPost, TeamMember, Page, Testimonial, JobPosting, Ebook, CaseStudy, Lead, Category, IndustryPage } from './types';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Blog Posts
@@ -116,6 +116,7 @@ export const blogPosts = {
       'author',
       'featured_image',
       'banner_image',
+      'hero_text_color',
       'category',
       'tags',
       'published',
@@ -140,6 +141,7 @@ export const blogPosts = {
       post.author || '',
       post.featured_image || '',
       post.banner_image || '',
+      post.hero_text_color || 'auto',
       post.category || '',
       post.tags || '',
       post.published || false,
@@ -186,6 +188,7 @@ export const blogPosts = {
           .from('blog_posts')
           .insert({
             ...post,
+            hero_text_color: post.hero_text_color || 'auto',
             // ensure timestamps exist if caller omitted them
             publish_date: post.publish_date || new Date().toISOString(),
           })
@@ -213,6 +216,81 @@ export const blogPosts = {
   
   delete: async (id: number) => {
     return await execute('DELETE FROM blog_posts WHERE id = $1', [id]);
+  },
+};
+
+// Industry Pages (Hero)
+export const industryPages = {
+  getAll: async (published = false) => {
+    const sqlQuery = published
+      ? `SELECT * FROM industry_pages WHERE published = true ORDER BY slug ASC`
+      : `SELECT * FROM industry_pages ORDER BY slug ASC`;
+    const result = await query(sqlQuery);
+    return result?.rows || [];
+  },
+
+  getBySlug: async (slug: string) => {
+    const result = await query('SELECT * FROM industry_pages WHERE slug = $1', [slug]);
+    return (result?.rows?.[0] || null) as IndustryPage | null;
+  },
+
+  create: async (page: Omit<IndustryPage, 'id' | 'created_at' | 'updated_at'>) => {
+    const sql = `
+      INSERT INTO industry_pages (
+        slug,
+        hero_title,
+        hero_subtitle,
+        hero_description,
+        hero_button_text,
+        hero_button_link,
+        hero_background_image,
+        hero_text_color,
+        hero_features,
+        published
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
+      )
+      RETURNING *
+    `;
+    const values = [
+      page.slug,
+      page.hero_title,
+      page.hero_subtitle ?? null,
+      page.hero_description ?? null,
+      page.hero_button_text ?? null,
+      page.hero_button_link ?? null,
+      page.hero_background_image ?? null,
+      page.hero_text_color ?? null,
+      page.hero_features ? JSON.stringify(page.hero_features) : null,
+      page.published ?? false,
+    ];
+    const result = await execute(sql, values);
+    return result?.rows?.[0] || result?.row || null;
+  },
+
+  update: async (id: number, page: Partial<IndustryPage>) => {
+    const fields = Object.keys(page).filter((k) => k !== "id");
+    if (fields.length === 0) return null;
+    const setClause = fields.map((k, i) => `${k} = $${i + 1}`).join(", ");
+    const values = fields.map((field) => {
+      if (field === "hero_features") {
+        const val = (page as any)[field];
+        return val ? JSON.stringify(val) : null;
+      }
+      return (page as any)[field];
+    });
+    const sql = `
+      UPDATE industry_pages
+      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${fields.length + 1}
+      RETURNING *
+    `;
+    const result = await execute(sql, [...values, id]);
+    return result?.rows?.[0] || result?.row || null;
+  },
+
+  delete: async (id: number) => {
+    return await execute("DELETE FROM industry_pages WHERE id = $1", [id]);
   },
 };
 

@@ -243,6 +243,13 @@ export async function POST(request: NextRequest) {
         excerpt: sanitizeArticleContent(validated.excerpt || ''),
         content: sanitizeArticleContent(validated.content || ''),
       };
+      
+      // Copy other fields that don't need sanitization
+      Object.keys(validated).forEach(key => {
+        if (!['title', 'excerpt', 'content'].includes(key)) {
+          sanitized[key] = (validated as any)[key];
+        }
+      });
       console.log('✅ Sanitization completed');
     } catch (sanitizeError: any) {
       console.error('❌ Sanitization error:', sanitizeError);

@@ -28,6 +28,7 @@ export default function NewBlogPost() {
         author: "",
         featured_image: "",
         banner_image: "",
+        hero_text_color: "auto",
         category: "",
         tags: "",
         published: false, // Default to draft - user can publish when ready
@@ -378,13 +379,13 @@ export default function NewBlogPost() {
                         {/* Featured Image */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-sm font-medium">Featured Image</Label>
+                                <Label className="text-sm font-medium">Featured Image (Right side of Hero)</Label>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
-                                        📐 Recommended: 1200×630px (16:9)
+                                        📐 Recommended: 800×600px (4:3 Ratio)
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                        Or 1920×1080px for high-res
+                                        Used in blog listings and right side of the hero section
                                     </span>
                                 </div>
                             </div>
@@ -499,16 +500,34 @@ export default function NewBlogPost() {
                             )}
                         </div>
 
+                        {/* Hero Text Color */}
+                        <div className="space-y-2">
+                            <Label htmlFor="hero_text_color">Hero Text Color</Label>
+                            <select
+                                id="hero_text_color"
+                                value={formData.hero_text_color}
+                                onChange={(e) => setFormData({ ...formData, hero_text_color: e.target.value })}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="auto">Auto (Depends on theme)</option>
+                                <option value="white">White (For dark backgrounds)</option>
+                                <option value="black">Black (For light backgrounds)</option>
+                            </select>
+                            <p className="text-xs text-muted-foreground">
+                                Choose the text color for the hero section based on your banner image.
+                            </p>
+                        </div>
+
                         {/* Banner Image */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-sm font-medium">Banner Image (Hero Section)</Label>
+                                <Label className="text-sm font-medium">Background/Banner Image (Hero Section)</Label>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-md border border-purple-200">
                                         📐 Recommended: 1920×600px (Full Width Banner)
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                        Displays above title in blog post
+                                        Displays as the background of the hero section
                                     </span>
                                 </div>
                             </div>
@@ -574,8 +593,8 @@ export default function NewBlogPost() {
                                                     <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                     </svg>
-                                                    <span className="text-sm font-medium">Upload Banner Image</span>
-                                                    <span className="text-xs text-muted-foreground">Optional - Full width hero image</span>
+                                                    <span className="text-sm font-medium">Upload Background Image</span>
+                                                    <span className="text-xs text-muted-foreground">Optional - Full width hero background</span>
                                                 </>
                                             )}
                                         </span>
