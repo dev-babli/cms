@@ -170,17 +170,19 @@ export default function NewTeamMember() {
     };
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-0 bg-white">
             <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="max-w-5xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link href="/admin/team">
-                                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                </button>
+                            <Link
+                                href="/admin/team"
+                                className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                aria-label="Back to team"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
                             </Link>
                             <h1 className="text-lg font-semibold">New Team Member</h1>
                         </div>

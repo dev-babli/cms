@@ -84,11 +84,9 @@ export default function ForgotPasswordPage() {
                         <p className="text-sm text-gray-600">
                             Please check your email and click the reset link to create a new password.
                         </p>
-                        <Link href="/auth/login">
-                            <Button className="w-full h-12 text-lg">
-                                Back to Login
-                            </Button>
-                        </Link>
+                        <Button asChild className="w-full h-12 text-lg">
+                            <Link href="/auth/login">Back to Login</Link>
+                        </Button>
                     </div>
                 </div>
             </AuthLayout>

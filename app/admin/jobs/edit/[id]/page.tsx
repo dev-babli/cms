@@ -86,7 +86,7 @@ export default function EditJobPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-0 bg-muted/20">
       <div className="px-[5%] py-12">
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border p-8">
           <div className="flex items-center justify-between mb-8">
@@ -96,9 +96,9 @@ export default function EditJobPage() {
                 Update job details and availability
               </p>
             </div>
-            <Link href="/admin/jobs">
-              <Button variant="outline">Back</Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/admin/jobs">Back</Link>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

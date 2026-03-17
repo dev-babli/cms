@@ -185,6 +185,7 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
                 }}
                 className="p-1.5 rounded-md text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827] transition-colors duration-150 ease-out"
                 title="Add Link (Ctrl+K)"
+                aria-label="Add link"
             >
                 <LinkIcon className="w-4 h-4" />
             </button>

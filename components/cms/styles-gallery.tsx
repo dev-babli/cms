@@ -10,7 +10,7 @@ interface StylesGalleryProps {
 }
 
 const styles = [
-    { name: 'Normal', type: 'paragraph', icon: Type, command: () => {} },
+    { name: 'Normal', type: 'paragraph', icon: Type, command: (editor: Editor) => editor.chain().focus().setParagraph().run() },
     { name: 'Heading 1', type: 'heading', level: 1, icon: Heading1, command: (editor: Editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
     { name: 'Heading 2', type: 'heading', level: 2, icon: Heading2, command: (editor: Editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
     { name: 'Heading 3', type: 'heading', level: 3, icon: Heading3, command: (editor: Editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
@@ -42,6 +42,9 @@ export function StylesGallery({ editor }: StylesGalleryProps) {
                 type="button"
                 onClick={() => setShowGallery(!showGallery)}
                 className="h-9 px-4 text-sm border border-border bg-background rounded-md hover:bg-muted transition-all duration-200 flex items-center gap-2 min-w-[140px] justify-between hover:scale-105 active:scale-95"
+                aria-label={`Text style: ${getActiveStyle()}`}
+                aria-haspopup="true"
+                aria-expanded={showGallery}
             >
                 <span className="flex items-center gap-2">
                     <Type className="w-4 h-4" />

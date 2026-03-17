@@ -72,7 +72,7 @@ export default function NewJobPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/20">
+    <div className="min-h-0 bg-muted/20">
       <div className="px-[5%] py-12">
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border p-8">
           <div className="flex items-center justify-between mb-8">
@@ -82,9 +82,9 @@ export default function NewJobPage() {
                 Publish new openings for the careers page
               </p>
             </div>
-            <Link href="/admin/jobs">
-              <Button variant="outline">Cancel</Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/admin/jobs">Cancel</Link>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -216,11 +216,9 @@ export default function NewJobPage() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <Link href="/admin/jobs">
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </Link>
+              <Button asChild type="button" variant="outline">
+                <Link href="/admin/jobs">Cancel</Link>
+              </Button>
               <Button
                 type="button"
                 variant="outline"

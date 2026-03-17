@@ -63,16 +63,17 @@ export default function NewBlogPostWithPreview() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-sky-blue-900 via-turquoise-900 to-pine-green text-white">
+        <div className="min-h-0 bg-gradient-to-br from-sky-blue-900 via-turquoise-900 to-pine-green text-white">
             {/* Top Bar */}
             <div className="border-b border-white/10 backdrop-blur-sm bg-white/5 sticky top-0 z-50">
                 <div className="px-[5%] py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link href="/admin/blog">
-                                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm border border-white/20 transition-all">
-                                    ← Back
-                                </button>
+                            <Link
+                                href="/admin/blog"
+                                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm border border-white/20 transition-all inline-block"
+                            >
+                                ← Back
                             </Link>
                             <h1 className="text-xl font-bold">Create New Post</h1>
                         </div>

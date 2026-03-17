@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSidebar } from "@/components/admin/admin-layout-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import Link from "next/link";
 
 export default function NewBlogPost() {
     const router = useRouter();
+    const { isWritingMode } = useSidebar();
     const [loading, setLoading] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [user, setUser] = useState<any>(null);
@@ -258,18 +260,16 @@ export default function NewBlogPost() {
     };
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-0 bg-white">
             {/* Header */}
             <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="max-w-5xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link href="/admin/blog">
-                                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                </button>
+                            <Link href="/admin/blog" className="inline-flex text-muted-foreground hover:text-foreground transition-colors" aria-label="Back to blog list">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
                             </Link>
                             <h1 className="text-lg font-semibold">New Blog Post</h1>
                         </div>
@@ -340,9 +340,9 @@ export default function NewBlogPost() {
                 </div>
             </header>
 
-            {/* Content */}
+            {/* Content - wider when sidebar collapsed (writing focus mode) */}
             <div className="px-6 py-12">
-                <div className="max-w-3xl mx-auto">
+                <div className={isWritingMode ? "max-w-5xl mx-auto" : "max-w-3xl mx-auto"}>
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Title */}
                         <div>
@@ -625,13 +625,14 @@ export default function NewBlogPost() {
                             />
                         </div>
 
-                        {/* Content Editor */}
+                        {/* Content Editor - taller when in writing mode */}
                         <div className="space-y-3">
                             <Label className="text-sm font-medium">Content</Label>
-                            <div className="border rounded-lg">
+                            <div className={isWritingMode ? "border rounded-lg min-h-[700px]" : "border rounded-lg"}>
                                 <RichTextEditor
                                     content={formData.content}
                                     onChange={(content) => setFormData({ ...formData, content })}
+                                    minHeight={isWritingMode ? 700 : 500}
                                 />
                             </div>
                         </div>

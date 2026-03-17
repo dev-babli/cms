@@ -201,9 +201,9 @@ export default function NewNews() {
                     </div>
 
                     <div className="flex items-center justify-end gap-4 pb-8">
-                        <Link href="/admin/news">
-                            <Button type="button" variant="outline">Cancel</Button>
-                        </Link>
+                        <Button asChild type="button" variant="outline">
+                            <Link href="/admin/news">Cancel</Link>
+                        </Button>
                         <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
                             {loading ? "Creating..." : "Create News Item"}
                         </Button>

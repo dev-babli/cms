@@ -52,7 +52,7 @@ function JobPreviewContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-white">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         );
@@ -60,7 +60,7 @@ function JobPreviewContent() {
 
     if (!previewData || !previewData.title) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-white">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-slate-900 mb-2">No Preview Data</h1>
                     <p className="text-slate-600">Please go back and create a job posting to preview.</p>
@@ -76,7 +76,7 @@ function JobPreviewContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+        <div className="min-h-0 bg-gradient-to-br from-slate-50 to-white">
             {/* Preview Banner */}
             <div className="bg-yellow-500 text-white px-6 py-3 text-center font-semibold">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -292,7 +292,7 @@ function JobPreviewContent() {
 export default function JobPreviewPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-white">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         }>

@@ -118,7 +118,7 @@ export default function EditNews({ params }: PageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        <div className="min-h-0 bg-gradient-to-br from-slate-50 via-white to-slate-50">
             <PremiumAdminHeader
                 title="Edit News Item"
                 description="Update news or announcement"
@@ -206,9 +206,9 @@ export default function EditNews({ params }: PageProps) {
                     </div>
 
                     <div className="flex items-center justify-end gap-4">
-                        <Link href="/admin/news">
-                            <Button type="button" variant="outline">Cancel</Button>
-                        </Link>
+                        <Button asChild type="button" variant="outline">
+                            <Link href="/admin/news">Cancel</Link>
+                        </Button>
                         <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
                             {saving ? "Saving..." : "Save Changes"}
                         </Button>

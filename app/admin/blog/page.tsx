@@ -191,13 +191,11 @@ export default function BlogList() {
                     <h1 className="text-[18px] font-medium text-[#111827] mb-1">Blog Posts</h1>
                     <p className="text-sm text-[#6B7280]">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</p>
                 </div>
-                <Link href="/admin/blog/new">
-                    <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        New Post
-                    </button>
+                <Link href="/admin/blog/new" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Post
                 </Link>
             </div>
 
@@ -209,13 +207,11 @@ export default function BlogList() {
                     </svg>
                     <h3 className="text-sm font-medium text-[#111827] mb-2">No posts yet</h3>
                     <p className="text-sm text-[#6B7280] mb-6">Get started by creating your first blog post</p>
-                    <Link href="/admin/blog/new">
-                        <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Create Post
-                        </button>
+                    <Link href="/admin/blog/new" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Post
                     </Link>
                 </div>
             ) : (
@@ -282,25 +278,27 @@ export default function BlogList() {
 
                                     {/* Actions Column */}
                                     <div className="col-span-2 flex items-center justify-end gap-2">
-                                        <Link href={`/admin/blog/edit/${post.id}`}>
-                                            <button
-                                                className="p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
-                                                title="Edit"
-                                            >
+                                        <Link
+                                            href={`/admin/blog/edit/${post.id}`}
+                                            className="inline-flex p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
+                                            title="Edit"
+                                            aria-label="Edit post"
+                                        >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
-                                            </button>
                                         </Link>
-                                        <Link href={`/blog/${post.slug}`} target="_blank">
-                                            <button
-                                                className="p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
-                                                title="View"
-                                            >
+                                        <Link
+                                            href={`/blog/${post.slug}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex p-1.5 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] rounded transition-colors duration-150 ease-out"
+                                            title="View post"
+                                            aria-label="View post"
+                                        >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                 </svg>
-                                            </button>
                                         </Link>
                                         {!post.published && (userRole === 'editor' || userRole === 'admin') && (
                                             <button

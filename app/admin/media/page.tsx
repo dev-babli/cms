@@ -265,7 +265,7 @@ export default function MediaPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center bg-white">
                 <div className="text-center">
                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading media library...</p>
@@ -275,18 +275,20 @@ export default function MediaPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-0 bg-white">
             {/* Header */}
             <header className="border-b bg-white">
                 <div className="px-6 py-4">
                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link href="/admin">
-                                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                </button>
+                            <Link
+                                href="/admin"
+                                className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
+                                aria-label="Back to dashboard"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
                             </Link>
                             <h1 className="text-2xl font-semibold">Media Library</h1>
                             <span className="text-sm text-gray-500">({filteredMedia.length} files)</span>
@@ -337,6 +339,7 @@ export default function MediaPage() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="max-w-md"
+                                aria-label="Search media files"
                             />
                         </div>
 
@@ -346,6 +349,7 @@ export default function MediaPage() {
                                     value={filters.type}
                                     onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as any }))}
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                    aria-label="Filter by type"
                                 >
                                     <option value="all">All Types</option>
                                     <option value="image">Images</option>
@@ -356,6 +360,7 @@ export default function MediaPage() {
                                     value={filters.dateRange}
                                     onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                    aria-label="Filter by date range"
                                 >
                                     <option value="all">All Time</option>
                                     <option value="today">Today</option>

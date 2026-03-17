@@ -25,7 +25,7 @@ export default function AdminError({
   }, [error, router]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-[50vh] flex-col items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md text-center">
         <div className="mb-6">
           <h1 className="text-6xl font-bold text-gray-900 mb-2">500</h1>

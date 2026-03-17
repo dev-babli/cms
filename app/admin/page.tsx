@@ -115,21 +115,17 @@ export default async function AdminDashboard() {
 
       {/* Quick Actions - Minimal */}
       <div className="mb-8 flex items-center gap-2">
-        <Link href="/admin/blog/new">
-          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Blog Post
-          </button>
+        <Link href="/admin/blog/new" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors duration-150 ease-out">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Blog Post
         </Link>
-        <Link href="/admin/ebooks/new">
-          <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F9FAFB] transition-colors duration-150 ease-out">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New eBook
-          </button>
+        <Link href="/admin/ebooks/new" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F9FAFB] transition-colors duration-150 ease-out">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New eBook
         </Link>
       </div>
 

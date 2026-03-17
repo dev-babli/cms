@@ -58,7 +58,7 @@ export default function JobsListPage() {
 
   if (!authenticated || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center">
+      <div className="min-h-[50vh] flex items-center justify-center bg-gradient-to-br from-slate-50 to-white">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Loading job postings...</p>
@@ -68,7 +68,7 @@ export default function JobsListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
+    <div className="min-h-0 bg-gradient-to-br from-slate-50 via-blue-50/30 via-white to-indigo-50/20">
       {/* Premium Header */}
       <header className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -89,14 +89,14 @@ export default function JobsListPage() {
                 <p className="text-sm text-slate-600 font-medium">{jobs.length} {jobs.length === 1 ? 'opening' : 'openings'} available</p>
               </div>
             </div>
-            <Link href="/admin/jobs/new">
-              <Button size="lg" className="btn-premium flex items-center gap-2 group">
+            <Button asChild size="lg" className="btn-premium flex items-center gap-2 group">
+              <Link href="/admin/jobs/new">
                 <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 New Job
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -112,11 +112,11 @@ export default function JobsListPage() {
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-2">No job postings yet</h3>
             <p className="text-slate-600 mb-6">Get started by creating your first job posting</p>
-            <Link href="/admin/jobs/new">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Link href="/admin/jobs/new">
                 Create Your First Job
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -204,18 +204,14 @@ export default function JobsListPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
-                    <Link href={`/admin/jobs/edit/${job.id}`} className="flex-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                      >
+                    <Button asChild variant="outline" size="sm" className="flex-1 w-full border-slate-300 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50">
+                      <Link href={`/admin/jobs/edit/${job.id}`}>
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"

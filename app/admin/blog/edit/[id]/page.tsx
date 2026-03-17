@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { useSidebar } from "@/components/admin/admin-layout-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +16,9 @@ interface PageProps {
 }
 
 export default function EditBlogPost({ params }: PageProps) {
-    // Properly unwrap params using use() hook for Next.js 15
     const { id } = use(params);
     const router = useRouter();
+    const { isWritingMode } = useSidebar();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [userRole, setUserRole] = useState<string>('viewer');
@@ -157,13 +158,13 @@ export default function EditBlogPost({ params }: PageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
+        <div className="min-h-0 bg-gradient-to-b from-muted/30 to-background">
             <div className="px-[5%] py-12">
-                <div className="container max-w-4xl mx-auto">
+                <div className={isWritingMode ? "container max-w-5xl mx-auto" : "container max-w-4xl mx-auto"}>
                     <div className="mb-8">
-                        <Link href="/admin/blog">
-                            <Button variant="outline">← Back to Blog Posts</Button>
-                        </Link>
+                        <Button asChild variant="outline">
+                            <Link href="/admin/blog">← Back to Blog Posts</Link>
+                        </Button>
                     </div>
 
                     <div className="premium-card p-8">
@@ -213,12 +214,13 @@ export default function EditBlogPost({ params }: PageProps) {
 
                             <div>
                                 <Label>Content *</Label>
-                                <div className="mt-2">
+                                <div className={isWritingMode ? "mt-2 min-h-[700px]" : "mt-2"}>
                                     <RichTextEditor
                                         content={formData.content}
                                         onChange={(content) =>
                                             setFormData({ ...formData, content })
                                         }
+                                        minHeight={isWritingMode ? 700 : 500}
                                     />
                                 </div>
                             </div>
@@ -460,11 +462,9 @@ export default function EditBlogPost({ params }: PageProps) {
                                     </Button>
                                 )}
 
-                                <Link href="/admin/blog">
-                                    <Button type="button" variant="outline" size="lg">
-                                        Cancel
-                                    </Button>
-                                </Link>
+                                <Button asChild type="button" variant="outline" size="lg">
+                                    <Link href="/admin/blog">Cancel</Link>
+                                </Button>
                             </div>
                         </form>
                     </div>

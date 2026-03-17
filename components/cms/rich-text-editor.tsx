@@ -72,9 +72,10 @@ interface RichTextEditorProps {
     content: string;
     onChange: (content: string) => void;
     placeholder?: string;
+    minHeight?: number;
 }
 
-export function RichTextEditor({ content, onChange, placeholder = 'Start typing...' }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, placeholder = 'Start typing...', minHeight = 500 }: RichTextEditorProps) {
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [showVideoUpload, setShowVideoUpload] = useState(false);
     const [showFindReplace, setShowFindReplace] = useState(false);
@@ -248,11 +249,12 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
         },
         editorProps: {
             attributes: {
-                class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[500px] p-8 max-w-none bg-white transition-all duration-300 ${
+                class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none p-8 max-w-none bg-white transition-all duration-300 ${
                     viewMode === 'print' ? 'max-w-4xl mx-auto' : 
                     viewMode === 'web' ? 'max-w-6xl mx-auto' : 
                     'max-w-full'
                 }`,
+                style: `min-height: ${minHeight}px`,
                 role: 'textbox',
                 'aria-label': 'Rich text editor',
                 'aria-multiline': 'true',
@@ -487,7 +489,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
 
     if (!editor) {
         return (
-            <div className="border border-border rounded-lg bg-white p-8 flex items-center justify-center min-h-[500px]">
+            <div className="border border-border rounded-lg bg-white p-8 flex items-center justify-center" style={{ minHeight: `${minHeight}px` }}>
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
@@ -554,8 +556,8 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                 <>
                     {/* Ribbon-Style Toolbar */}
                     <div className="bg-white border-b border-[#E5E7EB]">
-                        {/* Tab Navigation - proper spacing to prevent "HomeInsertDesignLayoutReview" merge */}
-                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto gap-1 min-w-0">
+                        {/* Tab Navigation - gap-x-4 ensures clear separation: Home | Insert | Design | Layout | Review */}
+                        <div className="flex items-center border-b border-[#E5E7EB] bg-white overflow-x-auto min-w-0 gap-x-4">
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -563,7 +565,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('home');
                                 }}
-                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors relative min-w-[4rem] ${
                                     activeTab === 'home'
                                         ? 'text-primary border-b-2 border-primary bg-primary/5'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -578,7 +580,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('insert');
                                 }}
-                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors relative min-w-[4rem] ${
                                     activeTab === 'insert'
                                         ? 'text-primary border-b-2 border-primary bg-primary/5'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -593,7 +595,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('design');
                                 }}
-                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative min-w-[4rem] ${
                                     activeTab === 'design'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
@@ -608,7 +610,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('layout');
                                 }}
-                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative min-w-[4rem] ${
                                     activeTab === 'layout'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'
@@ -623,7 +625,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Start typing.
                                     e.stopPropagation();
                                     setActiveTab('review');
                                 }}
-                                className={`flex-shrink-0 whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative ${
+                                className={`flex-shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 ease-out relative min-w-[4rem] ${
                                     activeTab === 'review'
                                         ? 'text-[#111827] border-b-2 border-[#3B82F6]'
                                         : 'text-[#6B7280] hover:text-[#111827] hover:bg-[#F9FAFB]'

@@ -1,21 +1,12 @@
-import { requireAuth, getCurrentUser } from "@/lib/auth/server";
-import LogoutButton from "@/components/auth/LogoutButton";
-import { NotificationBell } from "@/components/ui/notification-bell";
-import { SidebarNavItem } from "@/components/admin/sidebar-nav-item";
-import { redirect } from 'next/navigation';
+import { requireAuth } from "@/lib/auth/server";
+import { AdminLayoutClient } from "@/components/admin/admin-layout-client";
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Sanity Studio-style Admin Layout
- * 
- * Layout Structure:
- * ┌─────────────────────────────┐
- * │ Top Bar (Minimal, fixed)    │
- * ├───────────┬──────────────────┤
- * │ Sidebar   │ Main Content     │
- * │ (Fixed)   │ (Scrollable)     │
- * └───────────┴──────────────────┘
+ * Sidebar is collapsible (icons-only when collapsed).
+ * Auto-collapses on blog/news new/edit for writing focus.
  */
 export default async function AdminLayout({
   children,
@@ -114,53 +105,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#F7F7F8]">
-      {/* Sidebar - Fixed Width */}
-      <aside className="w-[240px] border-r border-[#E5E7EB] bg-white flex flex-col">
-        {/* Sidebar Header */}
-        <div className="h-[56px] border-b border-[#E5E7EB] flex items-center px-4">
-          <h1 className="text-sm font-medium text-[#111827]">Intellectt CMS</h1>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
-          {navigation.map((item) => (
-            <SidebarNavItem key={item.href} href={item.href} icon={item.icon}>
-              {item.name}
-            </SidebarNavItem>
-          ))}
-        </nav>
-
-        {/* User Info */}
-        <div className="border-t border-[#E5E7EB] p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#111827] truncate">{user.name}</p>
-              <p className="text-xs text-[#6B7280] capitalize">{user.role}</p>
-            </div>
-            <LogoutButton />
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar - Minimal, Utilitarian */}
-        <header className="h-[56px] border-b border-[#E5E7EB] bg-white flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            {/* Breadcrumb or page title will go here */}
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationBell />
-          </div>
-        </header>
-
-        {/* Main Canvas - Scrollable */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AdminLayoutClient navigation={navigation} user={user}>
+      {children}
+    </AdminLayoutClient>
   );
 }
 
