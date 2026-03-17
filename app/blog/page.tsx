@@ -8,8 +8,26 @@ export const metadata: Metadata = {
   description: 'Discover insights, innovations, and stories that drive digital transformation.',
 };
 
-export default async function BlogPage() {
-  const posts = await blogPosts.getAll(true); // Get only published posts
+interface PageProps {
+  searchParams?: Promise<{ category?: string; tag?: string }>;
+}
+
+export default async function BlogPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const category = params?.category;
+  const tag = params?.tag;
+
+  let posts = await blogPosts.getAll(true); // Get only published posts
+  if (category) {
+    posts = posts.filter((p: BlogPost | any) => (p.category || '').toLowerCase() === category.toLowerCase());
+  }
+  if (tag) {
+    const tagLower = tag.toLowerCase();
+    posts = posts.filter((p: BlogPost | any) => {
+      const tags = (p.tags || '').split(',').map((t: string) => t.trim().toLowerCase());
+      return tags.includes(tagLower);
+    });
+  }
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
@@ -32,10 +50,20 @@ export default async function BlogPage() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 leading-tight">
-            Our Blog
+            {(category || tag) ? (
+              <>Filtered: {category || tag} ({posts.length} {posts.length === 1 ? 'post' : 'posts'})</>
+            ) : (
+              'Our Blog'
+            )}
           </h1>
           <p className="text-xl text-slate-300 max-w-2xl leading-relaxed">
-            Discover insights, innovations, and stories that drive digital transformation.
+            {(category || tag) ? (
+              <Link href="/blog" className="text-blue-300 hover:text-white underline">
+                ← View all posts
+              </Link>
+            ) : (
+              'Discover insights, innovations, and stories that drive digital transformation.'
+            )}
           </p>
         </div>
       </header>
@@ -87,7 +115,7 @@ export default async function BlogPage() {
                   )}
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[3.5rem]">
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
                     {post.title}
                   </h3>
 

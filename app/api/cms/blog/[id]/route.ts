@@ -4,6 +4,7 @@ import { BlogPostSchema } from '@/lib/cms/types';
 import { sanitizeArticleContent, sanitizeTitle, sanitizeTrackingScript } from '@/lib/utils/sanitize';
 import { getCurrentUser } from '@/lib/auth/server';
 import { verifyOwnership, verifyDeletePermission } from '@/lib/auth/ownership';
+import { logAudit } from '@/lib/audit';
 import { applyCorsHeaders, handleCorsPreflight } from '@/lib/security/cors';
 import { createSecureResponse, createErrorResponse, handleOptions } from '@/lib/security/api-helpers';
 import { z } from 'zod';
@@ -134,6 +135,14 @@ export async function PUT(
       return createErrorResponse('Post not found or update failed', request, 404);
     }
     
+    await logAudit({
+      userEmail: user.email,
+      action: 'blog.update',
+      resourceType: 'blog',
+      resourceId: id,
+      metadata: { title: (result.row as any).title },
+    });
+    
     return createSecureResponse({ success: true, data: result.row }, request);
   } catch (error: any) {
     console.error('❌ [Update Blog] Error:', process.env.NODE_ENV === 'development' ? error : 'Error updating post');
@@ -187,6 +196,13 @@ export async function DELETE(
     // Authors cannot delete posts (already checked above)
     
     const result = await blogPosts.delete(id);
+    await logAudit({
+      userEmail: user.email,
+      action: 'blog.delete',
+      resourceType: 'blog',
+      resourceId: id,
+      metadata: { title: (existingPost as any).title },
+    });
     console.log('✅ [Delete Blog] Successfully deleted post ID:', id);
     const response = createSecureResponse({ success: true, data: result }, request);
     return applyCorsHeaders(response, request, { allowCredentials: true });

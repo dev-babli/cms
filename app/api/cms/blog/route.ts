@@ -13,6 +13,7 @@ export const revalidate = 0;
 
 import { handleCorsPreflight, applyCorsHeaders } from '@/lib/security/cors';
 import { getCurrentUser } from '@/lib/auth/server';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -280,6 +281,14 @@ export async function POST(request: NextRequest) {
       if (typeof global !== 'undefined' && (global as any).io) {
         (global as any).io.emit('blog:created', createdPost);
       }
+
+      await logAudit({
+        userEmail: user.email,
+        action: 'blog.create',
+        resourceType: 'blog',
+        resourceId: createdPost?.id,
+        metadata: { title: createdPost?.title },
+      });
       
       const response = NextResponse.json(
         { 
